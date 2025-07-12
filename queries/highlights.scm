@@ -3,47 +3,42 @@
 ; Comments
 (comment) @comment
 (block_comment) @comment
-(note) @comment.documentation
+(note) @comment
 
 ; Sections
-(section_header) @markup.heading
+(section_header) @keyword
 
 ; Metadata
 (metadata) @keyword
-(metadata (_) @string)
 
 ; Frontmatter
-(frontmatter) @markup.raw
-(yaml_content) @string.special
+(frontmatter) @keyword
+(yaml_content) @string
 
 ; Ingredients
-(ingredient "@" @punctuation.special)
-(ingredient (name) @variable)
-(ingredient (recipe_reference) @string.special.path)
-(ingredient (amount) @number)
-(ingredient (amount (units) @type))
+"@" @punctuation.special
+(ingredient name: (ingredient_text) @variable)
 
 ; Cookware
-(cookware "#" @punctuation.special)
-(cookware (name) @variable.parameter)
-(cookware (amount) @number)
-(cookware (amount (units) @type))
+"#" @punctuation.special
+(cookware name: (cookware_text) @function)
 
 ; Timer
-(timer "~" @punctuation.special)
-(timer (name) @variable.builtin)
-(timer (amount) @number)
-(timer (amount (units) @type))
+"~" @punctuation.special
+(timer name: (timer_text) @constant)
 
-; Special punctuation
+; Amounts
+(quantity) @number
+(units) @type
+
+; Operators
+"%" @operator
+
+; Brackets
 "{" @punctuation.bracket
 "}" @punctuation.bracket
 "(" @punctuation.bracket
 ")" @punctuation.bracket
-"%" @operator
 
-; Numbers
-(quantity) @number
-
-; Step text (default text color, no special highlighting)
-(step) @none
+; Delimiters
+"---" @punctuation.delimiter

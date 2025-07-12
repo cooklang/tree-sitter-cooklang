@@ -1,0 +1,72 @@
+==================
+Line comment
+==================
+
+-- Don't burn the roux!
+
+---
+
+(recipe
+  (comment))
+
+==================
+Line comment after text
+==================
+
+Cook slowly -- patience is key
+
+---
+
+(recipe
+  (step
+    (plain_text)
+    (comment)))
+
+==================
+Block comment inline
+==================
+
+Mash @potato{2%kg} [- TODO change units to litres -]
+
+---
+
+(recipe
+  (step
+    (plain_text)
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))
+    (plain_text)
+    (block_comment)))
+
+==================
+Block comment multiline
+==================
+
+[- This is a longer comment
+   that spans multiple lines
+   with various notes -]
+
+---
+
+(recipe
+  (block_comment))
+
+==================
+Multiple comments
+==================
+
+-- First comment
+Stir well [- remember to scrape bottom -] -- another comment
+
+---
+
+(recipe
+  (comment)
+  (step
+    (plain_text)
+    (block_comment)
+    (plain_text)
+    (comment)))

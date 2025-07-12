@@ -3,6 +3,7 @@ const PREC = {
   step: 2,
   modifier: 3,
   amount: 4,
+  ingredient_with_amount: 5,
   multiword: 10,
   quantity: 11,
 }
@@ -11,7 +12,11 @@ module.exports = grammar({
   name: 'cooklang',
 
   externals: $ => [
-    $._newline
+    $._newline,
+    $.ingredient_text,
+    $.cookware_text,
+    $.timer_text,
+    $.plain_text
   ],
 
   conflicts: $ => [
@@ -21,6 +26,7 @@ module.exports = grammar({
     [$.comment, $._alphabetic],
     [$.metadata, $.metadata], // TODO: is this really necessary?
     [$._multiword],
+    [$._name_multiword],
   ],
 
   rules: {
@@ -57,7 +63,12 @@ module.exports = grammar({
     ),
 
     metadata:           $ => seq(">>", $._word, ":", $._whitespace, choice($._text_item, $._number, $.amount)),
-    step:               $ => repeat1(prec.left(PREC.step, choice($._text_item, $.ingredient, $.cookware, $.timer))),
+    step:               $ => repeat1(choice(
+      $.ingredient,
+      $.cookware,
+      $.timer,
+      $.plain_text
+    )),
     comment:            $ => seq("-", "-", /.*/),
     block_comment:      $ => seq("[-", /[^-]*-+(?:[^]-][^-]*-+)*/, "]"),
     note:               $ => seq(">", /.*/),
@@ -73,64 +84,48 @@ module.exports = grammar({
       optional(/\s*=+/)
     ),
 
-    ingredient:         $ => prec.left(PREC.modifier, seq(
+    ingredient:         $ => seq(
       "@",
-      choice(
-        $.recipe_reference,
-        $.name
-      ),
-      optional(choice(
-        seq(
-          optional(seq("(", field('note', /[^)]+/), ")")),
-          "{",
-          repeat($._whitespace),
-          optional($.amount),
-          repeat($._whitespace),
-          "}"
-        ),
-        seq("(", field('note', /[^)]+/), ")")  // Allow note without braces
-      ))
-    )),
-    cookware:           $ => prec.left(PREC.modifier, seq(
+      field('name', $.ingredient_text),
+      optional(seq(
+        "{",
+        optional($.amount),
+        "}"
+      )),
+      optional(seq("(", field('note', /[^)]+/), ")"))
+    ),
+    cookware:           $ => seq(
       "#",
-      $.name,
-      optional(choice(
-        seq(
-          optional(seq("(", field('note', /[^)]+/), ")")),
-          "{",
-          repeat($._whitespace),
-          optional($.amount),
-          repeat($._whitespace),
-          "}"
-        ),
-        seq("(", field('note', /[^)]+/), ")")  // Allow note without braces
-      ))
-    )),
-    timer:              $ => prec.left(PREC.modifier, seq(
+      field('name', $.cookware_text),
+      optional(seq(
+        "{",
+        optional($.amount),
+        "}"
+      )),
+      optional(seq("(", field('note', /[^)]+/), ")"))
+    ),
+    timer:              $ => seq(
       "~",
-      optional($.name),
-      optional(choice(
-        seq(
-          optional(seq("(", field('note', /[^)]+/), ")")),
-          "{",
-          repeat($._whitespace),
-          optional($.amount),
-          repeat($._whitespace),
-          "}"
-        ),
-        seq("(", field('note', /[^)]+/), ")")  // Allow note without braces
-      ))
-    )),
+      optional(field('name', $.timer_text)),
+      optional(seq(
+        "{",
+        optional($.amount),
+        "}"
+      )),
+      optional(seq("(", field('note', /[^)]+/), ")"))
+    ),
 
     // Ref: https://github.com/cooklang/spec/blob/main/EBNF.md
-    name:               $ => prec.left(choice($._word, $._multiword)),
+    name:               $ => prec.left(choice($._name_word, $._name_multiword)),
+    _name_word:         $ => repeat1(choice($._alphabetic, $._digit, /[_\-]/)),
+    _name_multiword:    $ => seq(repeat1(prec.left(PREC.multiword, seq($._name_word, repeat1($._whitespace)))), optional($._name_word)),
     recipe_reference:   $ => /\.[\/\\][^{}\n(]*/,  // Matches paths starting with ./ or .\ (Windows)
     amount:             $ => prec.left(PREC.amount, choice($.quantity, seq($.quantity, repeat($._whitespace), "%", repeat($._whitespace), $.units))),
-    quantity:           $ => prec(PREC.quantity, choice($._number, $._multiword)),
-    units:              $ => choice($._word, $._multiword, $._punctuation),
+    quantity:           $ => prec(PREC.quantity, choice($._number, $._name_multiword)),
+    units:              $ => choice($._name_word, $._name_multiword),
 
     _multiword:         $ => seq(repeat1(prec.left(PREC.multiword, seq($._word, repeat1($._whitespace)))), optional($._word)),
-    _word:              $ => repeat1(choice($._alphabetic, $._digit, $._unreserved_symbol, ".", "/")),
+    _word:              $ => repeat1(choice($._alphabetic, $._digit, /[_\-]/)),
     _text_item:         $ => repeat1(choice($._alphabetic, $._digit, $._symbol, $._punctuation, $._whitespace)),
 
     _number:            $ => choice($._integer, $._fractional, $._decimal),

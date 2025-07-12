@@ -1,0 +1,88 @@
+==================
+Simple cookware
+==================
+
+#pot
+
+---
+
+(recipe
+  (step
+    (cookware
+      name: (cookware_text))))
+
+==================
+Cookware with empty braces
+==================
+
+#potato masher{}
+
+---
+
+(recipe
+  (step
+    (cookware
+      name: (cookware_text))))
+
+==================
+Cookware with quantity
+==================
+
+#sheet pan{2}
+
+---
+
+(recipe
+  (step
+    (cookware
+      name: (cookware_text)
+      (amount
+        (quantity)))))
+
+==================
+Cookware with note
+==================
+
+#large mixing bowl{1}(stainless steel)
+
+---
+
+(recipe
+  (step
+    (cookware
+      name: (cookware_text)
+      (amount
+        (quantity))
+      note: )))
+
+==================
+Multiple cookware in step
+==================
+
+Place in #oven{} on #baking sheet{}
+
+---
+
+(recipe
+  (step
+    (plain_text)
+    (cookware
+      name: (cookware_text))
+    (plain_text)
+    (cookware
+      name: (cookware_text))))
+
+==================
+Cookware with multiword name
+==================
+
+#cast iron skillet{1}
+
+---
+
+(recipe
+  (step
+    (cookware
+      name: (cookware_text)
+      (amount
+        (quantity)))))

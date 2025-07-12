@@ -1,0 +1,176 @@
+==================
+Simple ingredient without amount
+==================
+
+@salt
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text))))
+
+==================
+Ingredient with empty braces
+==================
+
+@ground black pepper{}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text))))
+
+==================
+Ingredient with quantity only
+==================
+
+@potato{2}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)))))
+
+==================
+Ingredient with quantity and unit
+==================
+
+@bacon strips{1%kg}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))
+
+==================
+Ingredient with decimal quantity
+==================
+
+@olive oil{2.5%tbsp}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))
+
+==================
+Ingredient with fractional quantity
+==================
+
+@flour{1/2%cup}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))
+
+==================
+Ingredient with note after amount
+==================
+
+@carrots{2}(diced)
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity))
+      note: )))
+
+==================
+Ingredient with multiword name
+==================
+
+@red bell pepper{1}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)))))
+
+==================
+Multiple ingredients in one step
+==================
+
+Mix @flour{2%cups} with @water{1%cup}
+
+---
+
+(recipe
+  (step
+    (plain_text)
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))
+    (plain_text)
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))
+
+==================
+Recipe reference with amount
+==================
+
+Add @./bases/tomato sauce{400%ml}
+
+---
+
+(recipe
+  (step
+    (plain_text)
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))
+
+==================
+Recipe reference Windows style
+==================
+
+Use @.\sauces\bechamel{200%g}
+
+---
+
+(recipe
+  (step
+    (plain_text)
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))

@@ -31,17 +31,24 @@
   {
     "type": "cookware",
     "named": true,
-    "fields": {},
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "cookware_text",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
-      "multiple": true,
-      "required": true,
+      "multiple": false,
+      "required": false,
       "types": [
         {
           "type": "amount",
-          "named": true
-        },
-        {
-          "type": "name",
           "named": true
         }
       ]
@@ -66,21 +73,24 @@
   {
     "type": "ingredient",
     "named": true,
-    "fields": {},
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "ingredient_text",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
-      "multiple": true,
-      "required": true,
+      "multiple": false,
+      "required": false,
       "types": [
         {
           "type": "amount",
-          "named": true
-        },
-        {
-          "type": "name",
-          "named": true
-        },
-        {
-          "type": "recipe_reference",
           "named": true
         }
       ]
@@ -100,11 +110,6 @@
         }
       ]
     }
-  },
-  {
-    "type": "name",
-    "named": true,
-    "fields": {}
   },
   {
     "type": "note",
@@ -205,7 +210,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "cookware",
@@ -213,6 +218,10 @@
         },
         {
           "type": "ingredient",
+          "named": true
+        },
+        {
+          "type": "plain_text",
           "named": true
         },
         {
@@ -225,17 +234,24 @@
   {
     "type": "timer",
     "named": true,
-    "fields": {},
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "timer_text",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": false,
       "types": [
         {
           "type": "amount",
-          "named": true
-        },
-        {
-          "type": "name",
           "named": true
         }
       ]
@@ -312,7 +328,19 @@
     "named": false
   },
   {
-    "type": "recipe_reference",
+    "type": "cookware_text",
+    "named": true
+  },
+  {
+    "type": "ingredient_text",
+    "named": true
+  },
+  {
+    "type": "plain_text",
+    "named": true
+  },
+  {
+    "type": "timer_text",
     "named": true
   },
   {

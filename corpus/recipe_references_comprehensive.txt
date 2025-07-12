@@ -1,0 +1,110 @@
+==================
+Unix style recipe reference
+==================
+
+@./sauces/tomato{400%ml}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))
+
+==================
+Windows style recipe reference
+==================
+
+@.\bases\white-sauce{200%g}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))
+
+==================
+Recipe reference with spaces in path
+==================
+
+@./pasta sauces/marinara{1%cup}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))
+
+==================
+Recipe reference without amount
+==================
+
+Add some @./condiments/mayo
+
+---
+
+(recipe
+  (step
+    (plain_text)
+    (ingredient
+      name: (ingredient_text))))
+
+==================
+Recipe reference with note
+==================
+
+@./stocks/chicken{500%ml}(warmed)
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units))
+      note: )))
+
+==================
+Nested path recipe reference
+==================
+
+@./bases/sauces/french/hollandaise{100%ml}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))
+
+==================
+Recipe reference with dashes and underscores
+==================
+
+@./prep_recipes/pre-made-dough{500%g}
+
+---
+
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text)
+      (amount
+        (quantity)
+        (units)))))
