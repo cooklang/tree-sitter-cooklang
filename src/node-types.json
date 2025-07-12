@@ -34,7 +34,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "amount",
@@ -69,7 +69,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "amount",
@@ -77,6 +77,10 @@
         },
         {
           "type": "name",
+          "named": true
+        },
+        {
+          "type": "recipe_reference",
           "named": true
         }
       ]
@@ -306,6 +310,10 @@
   {
     "type": "]",
     "named": false
+  },
+  {
+    "type": "recipe_reference",
+    "named": true
   },
   {
     "type": "{",

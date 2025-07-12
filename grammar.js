@@ -20,6 +20,7 @@ module.exports = grammar({
     [$._unreserved_symbol, $._symbol],
     [$.comment, $._alphabetic],
     [$.metadata, $.metadata], // TODO: is this really necessary?
+    [$._multiword],
   ],
 
   rules: {
@@ -74,44 +75,62 @@ module.exports = grammar({
 
     ingredient:         $ => prec.left(PREC.modifier, seq(
       "@",
-      optional($.name),
-      optional(seq("(", field('note', /[^)]+/), ")")),
-      "{",
-      repeat($._whitespace),
-      optional($.amount),
-      repeat($._whitespace),
-      "}"
+      choice(
+        $.recipe_reference,
+        $.name
+      ),
+      optional(choice(
+        seq(
+          optional(seq("(", field('note', /[^)]+/), ")")),
+          "{",
+          repeat($._whitespace),
+          optional($.amount),
+          repeat($._whitespace),
+          "}"
+        ),
+        seq("(", field('note', /[^)]+/), ")")  // Allow note without braces
+      ))
     )),
     cookware:           $ => prec.left(PREC.modifier, seq(
       "#",
-      optional($.name),
-      optional(seq("(", field('note', /[^)]+/), ")")),
-      "{",
-      repeat($._whitespace),
-      optional($.amount),
-      repeat($._whitespace),
-      "}"
+      $.name,
+      optional(choice(
+        seq(
+          optional(seq("(", field('note', /[^)]+/), ")")),
+          "{",
+          repeat($._whitespace),
+          optional($.amount),
+          repeat($._whitespace),
+          "}"
+        ),
+        seq("(", field('note', /[^)]+/), ")")  // Allow note without braces
+      ))
     )),
     timer:              $ => prec.left(PREC.modifier, seq(
       "~",
       optional($.name),
-      optional(seq("(", field('note', /[^)]+/), ")")),
-      "{",
-      repeat($._whitespace),
-      optional($.amount),
-      repeat($._whitespace),
-      "}"
+      optional(choice(
+        seq(
+          optional(seq("(", field('note', /[^)]+/), ")")),
+          "{",
+          repeat($._whitespace),
+          optional($.amount),
+          repeat($._whitespace),
+          "}"
+        ),
+        seq("(", field('note', /[^)]+/), ")")  // Allow note without braces
+      ))
     )),
 
-    // "%" will soon be changed to "*".
     // Ref: https://github.com/cooklang/spec/blob/main/EBNF.md
-    name:               $ => choice($._word, $._multiword),
+    name:               $ => prec.left(choice($._word, $._multiword)),
+    recipe_reference:   $ => /\.[\/\\][^{}\n(]*/,  // Matches paths starting with ./ or .\ (Windows)
     amount:             $ => prec.left(PREC.amount, choice($.quantity, seq($.quantity, repeat($._whitespace), "%", repeat($._whitespace), $.units))),
     quantity:           $ => prec(PREC.quantity, choice($._number, $._multiword)),
     units:              $ => choice($._word, $._multiword, $._punctuation),
 
     _multiword:         $ => seq(repeat1(prec.left(PREC.multiword, seq($._word, repeat1($._whitespace)))), optional($._word)),
-    _word:              $ => repeat1(choice($._alphabetic, $._digit, $._unreserved_symbol)),
+    _word:              $ => repeat1(choice($._alphabetic, $._digit, $._unreserved_symbol, ".", "/")),
     _text_item:         $ => repeat1(choice($._alphabetic, $._digit, $._symbol, $._punctuation, $._whitespace)),
 
     _number:            $ => choice($._integer, $._fractional, $._decimal),
