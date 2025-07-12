@@ -2,9 +2,7 @@
 
 ; Sections as symbols
 (section
-  (section_header
-    name: (_) @name)) @definition.class
+  (section_header) @name) @definition.class
 
 ; Metadata as properties
-(metadata
-  (_) @name) @definition.property
+(metadata) @definition.property

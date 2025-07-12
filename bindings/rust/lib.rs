@@ -6,7 +6,7 @@
 //! ```
 //! let code = "";
 //! let mut parser = tree_sitter::Parser::new();
-//! parser.set_language(tree_sitter_cooklang::language()).expect("Error loading Cooklang grammar");
+//! parser.set_language(&tree_sitter_cooklang::language()).expect("Error loading Cooklang grammar");
 //! let tree = parser.parse(code, None).unwrap();
 //! ```
 //!
@@ -33,12 +33,23 @@ pub fn language() -> Language {
 /// [`node-types.json`]: https://tree-sitter.github.io/tree-sitter/using-parsers#static-node-types
 pub const NODE_TYPES: &str = include_str!("../../src/node-types.json");
 
-// Uncomment these to include any queries that this grammar contains
+/// The syntax highlighting query for this grammar.
+pub const HIGHLIGHTS_QUERY: &str = include_str!("../../queries/highlights.scm");
 
-// pub const HIGHLIGHTS_QUERY: &'static str = include_str!("../../queries/highlights.scm");
-// pub const INJECTIONS_QUERY: &'static str = include_str!("../../queries/injections.scm");
-// pub const LOCALS_QUERY: &'static str = include_str!("../../queries/locals.scm");
-// pub const TAGS_QUERY: &'static str = include_str!("../../queries/tags.scm");
+/// The injection query for this grammar (e.g., for YAML in frontmatter).
+pub const INJECTIONS_QUERY: &str = include_str!("../../queries/injections.scm");
+
+/// The local variables query for this grammar.
+pub const LOCALS_QUERY: &str = include_str!("../../queries/locals.scm");
+
+/// The tags query for this grammar (for symbol navigation).
+pub const TAGS_QUERY: &str = include_str!("../../queries/tags.scm");
+
+/// The code folding query for this grammar.
+pub const FOLDS_QUERY: &str = include_str!("../../queries/folds.scm");
+
+/// The indentation query for this grammar.
+pub const INDENTS_QUERY: &str = include_str!("../../queries/indents.scm");
 
 #[cfg(test)]
 mod tests {
@@ -46,7 +57,24 @@ mod tests {
     fn test_can_load_grammar() {
         let mut parser = tree_sitter::Parser::new();
         parser
-            .set_language(super::language())
+            .set_language(&super::language())
             .expect("Error loading Cooklang grammar");
+    }
+
+    #[test]
+    fn test_query_constants_are_accessible() {
+        // Verify that all query constants are non-empty
+        assert!(!super::HIGHLIGHTS_QUERY.is_empty());
+        assert!(!super::INJECTIONS_QUERY.is_empty());
+        assert!(!super::LOCALS_QUERY.is_empty());
+        assert!(!super::TAGS_QUERY.is_empty());
+        assert!(!super::FOLDS_QUERY.is_empty());
+        assert!(!super::INDENTS_QUERY.is_empty());
+        
+        // Verify that queries can be parsed
+        let language = super::language();
+        let highlights_query = tree_sitter::Query::new(&language, super::HIGHLIGHTS_QUERY)
+            .expect("Failed to parse highlights query");
+        assert!(highlights_query.capture_names().len() > 0);
     }
 }

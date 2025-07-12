@@ -1,4 +1,4 @@
-use tree_sitter::{Language, Parser};
+use tree_sitter::Parser;
 use tree_sitter_cooklang;
 
 fn main() {
