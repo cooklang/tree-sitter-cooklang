@@ -34,6 +34,7 @@ module.exports = grammar({
       $.step,
       $.comment,
       $.block_comment,
+      $.note,
     ),
 
     frontmatter: $ => seq(
@@ -55,6 +56,7 @@ module.exports = grammar({
     step:               $ => repeat1(prec.left(PREC.step, choice($._text_item, $.ingredient, $.cookware, $.timer))),
     comment:            $ => seq("-", "-", /.*/),
     block_comment:      $ => seq("[-", /[^-]*-+(?:[^]-][^-]*-+)*/, "]"),
+    note:               $ => seq(">", /.*/),
 
     ingredient:         $ => prec.left(PREC.modifier, seq("@", optional($.name), "{", repeat($._whitespace), optional($.amount), repeat($._whitespace), "}")),
     cookware:           $ => prec.left(PREC.modifier, seq("#", optional($.name), "{", repeat($._whitespace), optional($.amount), repeat($._whitespace), "}")),

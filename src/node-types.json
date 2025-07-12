@@ -103,6 +103,11 @@
     "fields": {}
   },
   {
+    "type": "note",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "quantity",
     "named": true,
     "fields": {}
@@ -130,6 +135,10 @@
         },
         {
           "type": "metadata",
+          "named": true
+        },
+        {
+          "type": "note",
           "named": true
         },
         {
@@ -221,6 +230,10 @@
   },
   {
     "type": ":",
+    "named": false
+  },
+  {
+    "type": ">",
     "named": false
   },
   {
