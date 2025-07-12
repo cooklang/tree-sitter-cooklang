@@ -1,4 +1,5 @@
 const PREC = {
+  section: 1,
   step: 2,
   modifier: 3,
   amount: 4,
@@ -24,13 +25,15 @@ module.exports = grammar({
   rules: {
     recipe: $ => seq(
       optional($.frontmatter),
-      repeat(seq($._line, $._newline)),
-      optional($._line),
+      repeat(choice(
+        seq($.metadata, $._newline),
+        $.section,
+        seq($._content_line, $._newline)
+      )),
       optional(/\u0000/), // Strange EOF thing
     ),
 
-    _line: $ => choice(
-      $.metadata,
+    _content_line: $ => choice(
       $.step,
       $.comment,
       $.block_comment,
@@ -57,10 +60,48 @@ module.exports = grammar({
     comment:            $ => seq("-", "-", /.*/),
     block_comment:      $ => seq("[-", /[^-]*-+(?:[^]-][^-]*-+)*/, "]"),
     note:               $ => seq(">", /.*/),
+    section:            $ => prec.right(PREC.section, seq(
+      field('header', $.section_header),
+      $._newline,
+      field('content', repeat(seq($._content_line, $._newline)))
+    )),
 
-    ingredient:         $ => prec.left(PREC.modifier, seq("@", optional($.name), "{", repeat($._whitespace), optional($.amount), repeat($._whitespace), "}")),
-    cookware:           $ => prec.left(PREC.modifier, seq("#", optional($.name), "{", repeat($._whitespace), optional($.amount), repeat($._whitespace), "}")),
-    timer:              $ => prec.left(PREC.modifier, seq("~", optional($.name), "{", repeat($._whitespace), optional($.amount), repeat($._whitespace), "}")),
+    section_header:     $ => seq(
+      /=+/,
+      optional(field('name', /[^\n=]*[^\n=\s]/)),
+      optional(/\s*=+/)
+    ),
+
+    ingredient:         $ => prec.left(PREC.modifier, seq(
+      "@",
+      optional($.name),
+      optional(seq("(", field('note', /[^)]+/), ")")),
+      "{",
+      repeat($._whitespace),
+      optional($.amount),
+      repeat($._whitespace),
+      "}"
+    )),
+    cookware:           $ => prec.left(PREC.modifier, seq(
+      "#",
+      optional($.name),
+      optional(seq("(", field('note', /[^)]+/), ")")),
+      "{",
+      repeat($._whitespace),
+      optional($.amount),
+      repeat($._whitespace),
+      "}"
+    )),
+    timer:              $ => prec.left(PREC.modifier, seq(
+      "~",
+      optional($.name),
+      optional(seq("(", field('note', /[^)]+/), ")")),
+      "{",
+      repeat($._whitespace),
+      optional($.amount),
+      repeat($._whitespace),
+      "}"
+    )),
 
     // "%" will soon be changed to "*".
     // Ref: https://github.com/cooklang/spec/blob/main/EBNF.md

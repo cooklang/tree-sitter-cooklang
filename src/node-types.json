@@ -142,11 +142,58 @@
           "named": true
         },
         {
+          "type": "section",
+          "named": true
+        },
+        {
           "type": "step",
           "named": true
         }
       ]
     }
+  },
+  {
+    "type": "section",
+    "named": true,
+    "fields": {
+      "content": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "block_comment",
+            "named": true
+          },
+          {
+            "type": "comment",
+            "named": true
+          },
+          {
+            "type": "note",
+            "named": true
+          },
+          {
+            "type": "step",
+            "named": true
+          }
+        ]
+      },
+      "header": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "section_header",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "section_header",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "step",
@@ -206,6 +253,14 @@
   },
   {
     "type": "%",
+    "named": false
+  },
+  {
+    "type": "(",
+    "named": false
+  },
+  {
+    "type": ")",
     "named": false
   },
   {
