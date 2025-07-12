@@ -1,0 +1,68 @@
+=====================================
+Simple Recipe Reference
+=====================================
+
+Pour over with @./sauces/Hollandaise{150%g}.
+
+---
+
+(recipe 
+  (step 
+    (ingredient 
+      (recipe_reference) 
+      (amount (quantity) (units)))))
+
+=====================================
+Recipe Reference Without Amount
+=====================================
+
+Serve with @./sides/Rice.
+
+---
+
+(recipe 
+  (step 
+    (ingredient (recipe_reference))))
+
+=====================================
+Reference with Spaces in Path
+=====================================
+
+Top with @./Sauces/Super Sweet{1%portion}.
+
+---
+
+(recipe 
+  (step 
+    (ingredient 
+      (recipe_reference) 
+      (amount (quantity) (units)))))
+
+=====================================
+Windows Style Reference
+=====================================
+
+Use @.\recipes\Tomato Sauce{100%ml}.
+
+---
+
+(recipe 
+  (step 
+    (ingredient 
+      (recipe_reference) 
+      (amount (quantity) (units)))))
+
+=====================================
+Reference with Note
+=====================================
+
+Add @./broths/Vegetable{2%cups}(heated).
+
+---
+
+(recipe 
+  (step 
+    (ingredient 
+      (recipe_reference) 
+      (amount (quantity) (units))
+      note: )))

@@ -1,2 +1,4 @@
 node_modules/
 .ccls-cache
+target
+build

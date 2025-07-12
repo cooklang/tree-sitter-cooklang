@@ -1,0 +1,141 @@
+====================================
+Simple Short-hand Preparation
+====================================
+
+Mix @onion{1}(peeled and finely chopped) into paste.
+
+---
+
+(recipe 
+  (step 
+    (ingredient 
+      (name) 
+      (amount (quantity))
+      note: )))
+
+==========================================
+Multiple Preparations
+==========================================
+
+Mix @onion{1}(peeled and finely chopped) and @garlic{2%cloves}(peeled and minced) into paste.
+
+---
+
+(recipe 
+  (step 
+    (ingredient 
+      (name) 
+      (amount (quantity))
+      note: )
+    (ingredient 
+      (name) 
+      (amount (quantity) (units))
+      note: )))
+
+==========================================
+Preparation with Complex Text
+==========================================
+
+Add @tomatoes{4}(washed, cored, and cut into 1/4-inch slices).
+
+---
+
+(recipe 
+  (step 
+    (ingredient 
+      (name) 
+      (amount (quantity))
+      note: )))
+
+==========================================
+Cookware with Preparation Note
+==========================================
+
+Place in #pan{}(well-oiled and preheated).
+
+---
+
+(recipe 
+  (step 
+    (cookware 
+      (name)
+      note: )))
+
+==========================================
+Timer with Note
+==========================================
+
+Cook for ~{10%minutes}(stirring occasionally).
+
+---
+
+(recipe 
+  (step 
+    (timer 
+      (amount (quantity) (units))
+      note: )))
+
+==========================================
+Ingredient Without Amount But With Note
+==========================================
+
+Season with @salt(to taste).
+
+---
+
+(recipe 
+  (step 
+    (ingredient 
+      (name)
+      note: )))
+
+==========================================
+Ingredient With Empty Braces And Note
+==========================================
+
+Season with @pepper{}(freshly ground).
+
+---
+
+(recipe 
+  (step 
+    (ingredient 
+      (name)
+      note: )))
+
+==========================================
+Simple One Word Ingredient
+==========================================
+
+Add @salt to taste.
+
+---
+
+(recipe 
+  (step 
+    (ingredient (name))))
+
+==========================================
+One Word Cookware
+==========================================
+
+Heat #pan on medium.
+
+---
+
+(recipe 
+  (step 
+    (cookware (name))))
+
+==========================================
+Multiple Simple Ingredients
+==========================================
+
+Add @salt and @pepper to taste.
+
+---
+
+(recipe 
+  (step 
+    (ingredient (name))
+    (ingredient (name))))
