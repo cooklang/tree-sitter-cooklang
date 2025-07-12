@@ -48,6 +48,22 @@
     }
   },
   {
+    "type": "frontmatter",
+    "named": true,
+    "fields": {
+      "content": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "yaml_content",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "ingredient",
     "named": true,
     "fields": {},
@@ -109,6 +125,10 @@
           "named": true
         },
         {
+          "type": "frontmatter",
+          "named": true
+        },
+        {
           "type": "metadata",
           "named": true
         },
@@ -167,6 +187,11 @@
     "fields": {}
   },
   {
+    "type": "yaml_content",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "#",
     "named": false
   },
@@ -176,6 +201,10 @@
   },
   {
     "type": "-",
+    "named": false
+  },
+  {
+    "type": "---",
     "named": false
   },
   {

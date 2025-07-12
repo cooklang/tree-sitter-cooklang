@@ -23,6 +23,7 @@ module.exports = grammar({
 
   rules: {
     recipe: $ => seq(
+      optional($.frontmatter),
       repeat(seq($._line, $._newline)),
       optional($._line),
       optional(/\u0000/), // Strange EOF thing
@@ -33,6 +34,21 @@ module.exports = grammar({
       $.step,
       $.comment,
       $.block_comment,
+    ),
+
+    frontmatter: $ => seq(
+      "---",
+      $._newline,
+      field('content', optional(alias($._frontmatter_content, $.yaml_content))),
+      "---",
+      $._newline
+    ),
+
+    _frontmatter_content: $ => repeat1(
+      seq(
+        /[^\n]+/,
+        $._newline
+      )
     ),
 
     metadata:           $ => seq(">>", $._word, ":", $._whitespace, choice($._text_item, $._number, $.amount)),
