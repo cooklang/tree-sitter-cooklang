@@ -94,6 +94,7 @@
   {
     "type": "recipe",
     "named": true,
+    "root": true,
     "fields": {},
     "children": {
       "multiple": true,
@@ -183,6 +184,10 @@
   },
   {
     "type": "/",
+    "named": false
+  },
+  {
+    "type": "0",
     "named": false
   },
   {
