@@ -18,7 +18,8 @@ static bool is_name_char(int32_t c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
            (c >= '0' && c <= '9') ||
-           c == '_' || c == '-';
+           c == '_' || c == '-' ||
+           c >= 128; // Allow unicode characters
 }
 
 bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
@@ -115,46 +116,69 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
             }
         }
 
-        // Regular ingredient name (can be multiword)
+        // Regular ingredient name
         bool has_content = false;
-        bool in_whitespace = false;
 
-        while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
-               lexer->lookahead != '{' && lexer->lookahead != '(' &&
-               lexer->lookahead != '@' && lexer->lookahead != '#' &&
-               lexer->lookahead != '~') {
-
-            if (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-                if (!has_content) {
-                    // Skip leading whitespace
-                    lexer->advance(lexer, false);
-                    continue;
-                }
-                // Mark that we're in whitespace but keep consuming
-                in_whitespace = true;
-                lexer->advance(lexer, false);
-            } else {
-                // Non-whitespace character
-                if (in_whitespace) {
-                    // We had whitespace and now have content, so this is part of a multiword name
-                    in_whitespace = false;
-                }
-                has_content = true;
-                lexer->advance(lexer, false);
-            }
+        // First, consume initial word characters
+        while (is_name_char(lexer->lookahead)) {
+            has_content = true;
+            lexer->advance(lexer, false);
         }
 
-        // If we ended on whitespace, we need to back up
-        if (in_whitespace && has_content) {
-            // The lexer has already advanced past the whitespace
-            // Just mark where we are
-            lexer->mark_end(lexer);
+        if (!has_content) {
+            return false;
         }
 
-        if (has_content) {
+        // Now check if we should continue for multiword
+        if (lexer->lookahead == '{') {
+            // We're done - single word before brace
             lexer->result_symbol = INGREDIENT_TEXT;
             return true;
         }
+
+        // Mark position after first word as potential end
+        lexer->mark_end(lexer);
+
+        // Look ahead to see if there's a brace
+        bool found_brace = false;
+        bool consumed_space = false;
+
+        while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
+               lexer->lookahead != '(' && lexer->lookahead != '@' &&
+               lexer->lookahead != '#' && lexer->lookahead != '~') {
+
+            if (lexer->lookahead == '{') {
+                found_brace = true;
+                break;
+            }
+
+            if (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+                consumed_space = true;
+                lexer->advance(lexer, false);
+            } else if (consumed_space && is_name_char(lexer->lookahead)) {
+                // Continue consuming for potential multiword
+                while (is_name_char(lexer->lookahead)) {
+                    lexer->advance(lexer, false);
+                }
+                consumed_space = false;
+            } else {
+                // Non-name character after space, stop here
+                break;
+            }
+        }
+
+        // If we found '{', this is multiword - use current position
+        if (found_brace) {
+            // Trim trailing whitespace if any
+            while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+                lexer->advance(lexer, false);
+            }
+            lexer->mark_end(lexer);
+        }
+        // Otherwise use the saved position (single word)
+
+        lexer->result_symbol = INGREDIENT_TEXT;
+        return true;
     }
 
     // Handle cookware text (can be multiword)
@@ -167,37 +191,67 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
             return false;
         }
         bool has_content = false;
-        bool in_whitespace = false;
 
-        while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
-               lexer->lookahead != '{' && lexer->lookahead != '(' &&
-               lexer->lookahead != '@' && lexer->lookahead != '#' &&
-               lexer->lookahead != '~') {
-
-            if (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-                if (!has_content) {
-                    lexer->advance(lexer, false);
-                    continue;
-                }
-                in_whitespace = true;
-                lexer->advance(lexer, false);
-            } else {
-                if (in_whitespace) {
-                    in_whitespace = false;
-                }
-                has_content = true;
-                lexer->advance(lexer, false);
-            }
+        // First, consume initial word characters
+        while (is_name_char(lexer->lookahead)) {
+            has_content = true;
+            lexer->advance(lexer, false);
         }
 
-        if (in_whitespace && has_content) {
-            lexer->mark_end(lexer);
+        if (!has_content) {
+            return false;
         }
 
-        if (has_content) {
+        // Now check if we should continue for multiword
+        if (lexer->lookahead == '{') {
+            // We're done - single word before brace
             lexer->result_symbol = COOKWARE_TEXT;
             return true;
         }
+
+        // Mark position after first word as potential end
+        lexer->mark_end(lexer);
+
+        // Look ahead to see if there's a brace
+        bool found_brace = false;
+        bool consumed_space = false;
+
+        while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
+               lexer->lookahead != '(' && lexer->lookahead != '@' &&
+               lexer->lookahead != '#' && lexer->lookahead != '~') {
+
+            if (lexer->lookahead == '{') {
+                found_brace = true;
+                break;
+            }
+
+            if (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+                consumed_space = true;
+                lexer->advance(lexer, false);
+            } else if (consumed_space && is_name_char(lexer->lookahead)) {
+                // Continue consuming for potential multiword
+                while (is_name_char(lexer->lookahead)) {
+                    lexer->advance(lexer, false);
+                }
+                consumed_space = false;
+            } else {
+                // Non-name character after space, stop here
+                break;
+            }
+        }
+
+        // If we found '{', this is multiword - use current position
+        if (found_brace) {
+            // Trim trailing whitespace if any
+            while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+                lexer->advance(lexer, false);
+            }
+            lexer->mark_end(lexer);
+        }
+        // Otherwise use the saved position (single word)
+
+        lexer->result_symbol = COOKWARE_TEXT;
+        return true;
     }
 
     // Handle timer text (can be multiword)
@@ -210,37 +264,67 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
             return false;
         }
         bool has_content = false;
-        bool in_whitespace = false;
 
-        while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
-               lexer->lookahead != '{' && lexer->lookahead != '(' &&
-               lexer->lookahead != '@' && lexer->lookahead != '#' &&
-               lexer->lookahead != '~') {
-
-            if (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-                if (!has_content) {
-                    lexer->advance(lexer, false);
-                    continue;
-                }
-                in_whitespace = true;
-                lexer->advance(lexer, false);
-            } else {
-                if (in_whitespace) {
-                    in_whitespace = false;
-                }
-                has_content = true;
-                lexer->advance(lexer, false);
-            }
+        // First, consume initial word characters
+        while (is_name_char(lexer->lookahead)) {
+            has_content = true;
+            lexer->advance(lexer, false);
         }
 
-        if (in_whitespace && has_content) {
-            lexer->mark_end(lexer);
+        if (!has_content) {
+            return false;
         }
 
-        if (has_content) {
+        // Now check if we should continue for multiword
+        if (lexer->lookahead == '{') {
+            // We're done - single word before brace
             lexer->result_symbol = TIMER_TEXT;
             return true;
         }
+
+        // Mark position after first word as potential end
+        lexer->mark_end(lexer);
+
+        // Look ahead to see if there's a brace
+        bool found_brace = false;
+        bool consumed_space = false;
+
+        while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
+               lexer->lookahead != '(' && lexer->lookahead != '@' &&
+               lexer->lookahead != '#' && lexer->lookahead != '~') {
+
+            if (lexer->lookahead == '{') {
+                found_brace = true;
+                break;
+            }
+
+            if (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+                consumed_space = true;
+                lexer->advance(lexer, false);
+            } else if (consumed_space && is_name_char(lexer->lookahead)) {
+                // Continue consuming for potential multiword
+                while (is_name_char(lexer->lookahead)) {
+                    lexer->advance(lexer, false);
+                }
+                consumed_space = false;
+            } else {
+                // Non-name character after space, stop here
+                break;
+            }
+        }
+
+        // If we found '{', this is multiword - use current position
+        if (found_brace) {
+            // Trim trailing whitespace if any
+            while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+                lexer->advance(lexer, false);
+            }
+            lexer->mark_end(lexer);
+        }
+        // Otherwise use the saved position (single word)
+
+        lexer->result_symbol = TIMER_TEXT;
+        return true;
     }
 
     // Handle plain text - everything that's not a special character
