@@ -1,0 +1,20 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/tree-sitter.schema.json",
+  "grammars": [
+    {
+      "name": "cooklang",
+      "version": "1.0.0",
+      "path": ".",
+      "camelCase": false,
+      "highlights": "queries/highlights.scm",
+      "file-types": ["cook"],
+      "injection-regex": "cook"
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "author": "tree-sitter-cooklang",
+    "license": "ISC",
+    "description": "A tree-sitter parser for Cooklang"
+  }
+}
