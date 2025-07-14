@@ -107,9 +107,12 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
             if (lexer->lookahead == '/' || lexer->lookahead == '\\') {
                 lexer->advance(lexer, false);
                 // Consume path characters (including spaces)
-                while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
+                int path_count = 0;
+                while (path_count < 1000 &&
+                       lexer->lookahead != 0 && lexer->lookahead != '\n' &&
                        lexer->lookahead != '{' && lexer->lookahead != '(') {
                     lexer->advance(lexer, false);
+                    path_count++;
                 }
                 lexer->result_symbol = INGREDIENT_TEXT;
                 return true;
@@ -120,9 +123,11 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         bool has_content = false;
 
         // First, consume initial word characters
-        while (is_name_char(lexer->lookahead)) {
+        int char_count = 0;
+        while (is_name_char(lexer->lookahead) && char_count < 1000) {
             has_content = true;
             lexer->advance(lexer, false);
+            char_count++;
         }
 
         if (!has_content) {
@@ -142,10 +147,15 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         // Look ahead to see if there's a brace
         bool found_brace = false;
         bool consumed_space = false;
+        int safety_counter = 0;
+        const int MAX_LOOKAHEAD = 1000;
 
-        while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
+        while (safety_counter < MAX_LOOKAHEAD &&
+               lexer->lookahead != 0 && lexer->lookahead != '\n' &&
                lexer->lookahead != '(' && lexer->lookahead != '@' &&
                lexer->lookahead != '#' && lexer->lookahead != '~') {
+
+            safety_counter++;
 
             if (lexer->lookahead == '{') {
                 found_brace = true;
@@ -157,8 +167,9 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
                 lexer->advance(lexer, false);
             } else if (consumed_space && is_name_char(lexer->lookahead)) {
                 // Continue consuming for potential multiword
-                while (is_name_char(lexer->lookahead)) {
+                while (is_name_char(lexer->lookahead) && safety_counter < MAX_LOOKAHEAD) {
                     lexer->advance(lexer, false);
+                    safety_counter++;
                 }
                 consumed_space = false;
             } else {
@@ -168,10 +179,11 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         }
 
         // If we found '{', this is multiword - use current position
-        if (found_brace) {
+        if (found_brace && safety_counter < MAX_LOOKAHEAD) {
             // Trim trailing whitespace if any
-            while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+            while ((lexer->lookahead == ' ' || lexer->lookahead == '\t') && safety_counter < MAX_LOOKAHEAD) {
                 lexer->advance(lexer, false);
+                safety_counter++;
             }
             lexer->mark_end(lexer);
         }
@@ -193,9 +205,11 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         bool has_content = false;
 
         // First, consume initial word characters
-        while (is_name_char(lexer->lookahead)) {
+        int char_count = 0;
+        while (is_name_char(lexer->lookahead) && char_count < 1000) {
             has_content = true;
             lexer->advance(lexer, false);
+            char_count++;
         }
 
         if (!has_content) {
@@ -215,10 +229,15 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         // Look ahead to see if there's a brace
         bool found_brace = false;
         bool consumed_space = false;
+        int safety_counter = 0;
+        const int MAX_LOOKAHEAD = 1000;
 
-        while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
+        while (safety_counter < MAX_LOOKAHEAD &&
+               lexer->lookahead != 0 && lexer->lookahead != '\n' &&
                lexer->lookahead != '(' && lexer->lookahead != '@' &&
                lexer->lookahead != '#' && lexer->lookahead != '~') {
+
+            safety_counter++;
 
             if (lexer->lookahead == '{') {
                 found_brace = true;
@@ -230,8 +249,9 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
                 lexer->advance(lexer, false);
             } else if (consumed_space && is_name_char(lexer->lookahead)) {
                 // Continue consuming for potential multiword
-                while (is_name_char(lexer->lookahead)) {
+                while (is_name_char(lexer->lookahead) && safety_counter < MAX_LOOKAHEAD) {
                     lexer->advance(lexer, false);
+                    safety_counter++;
                 }
                 consumed_space = false;
             } else {
@@ -241,10 +261,11 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         }
 
         // If we found '{', this is multiword - use current position
-        if (found_brace) {
+        if (found_brace && safety_counter < MAX_LOOKAHEAD) {
             // Trim trailing whitespace if any
-            while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+            while ((lexer->lookahead == ' ' || lexer->lookahead == '\t') && safety_counter < MAX_LOOKAHEAD) {
                 lexer->advance(lexer, false);
+                safety_counter++;
             }
             lexer->mark_end(lexer);
         }
@@ -266,9 +287,11 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         bool has_content = false;
 
         // First, consume initial word characters
-        while (is_name_char(lexer->lookahead)) {
+        int char_count = 0;
+        while (is_name_char(lexer->lookahead) && char_count < 1000) {
             has_content = true;
             lexer->advance(lexer, false);
+            char_count++;
         }
 
         if (!has_content) {
@@ -288,10 +311,15 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         // Look ahead to see if there's a brace
         bool found_brace = false;
         bool consumed_space = false;
+        int safety_counter = 0;
+        const int MAX_LOOKAHEAD = 1000;
 
-        while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
+        while (safety_counter < MAX_LOOKAHEAD &&
+               lexer->lookahead != 0 && lexer->lookahead != '\n' &&
                lexer->lookahead != '(' && lexer->lookahead != '@' &&
                lexer->lookahead != '#' && lexer->lookahead != '~') {
+
+            safety_counter++;
 
             if (lexer->lookahead == '{') {
                 found_brace = true;
@@ -303,8 +331,9 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
                 lexer->advance(lexer, false);
             } else if (consumed_space && is_name_char(lexer->lookahead)) {
                 // Continue consuming for potential multiword
-                while (is_name_char(lexer->lookahead)) {
+                while (is_name_char(lexer->lookahead) && safety_counter < MAX_LOOKAHEAD) {
                     lexer->advance(lexer, false);
+                    safety_counter++;
                 }
                 consumed_space = false;
             } else {
@@ -314,10 +343,11 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         }
 
         // If we found '{', this is multiword - use current position
-        if (found_brace) {
+        if (found_brace && safety_counter < MAX_LOOKAHEAD) {
             // Trim trailing whitespace if any
-            while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+            while ((lexer->lookahead == ' ' || lexer->lookahead == '\t') && safety_counter < MAX_LOOKAHEAD) {
                 lexer->advance(lexer, false);
+                safety_counter++;
             }
             lexer->mark_end(lexer);
         }
@@ -340,11 +370,14 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
             }
         }
 
-        while (lexer->lookahead != 0 && lexer->lookahead != '\n' &&
+        int plain_count = 0;
+        while (plain_count < 10000 &&
+               lexer->lookahead != 0 && lexer->lookahead != '\n' &&
                lexer->lookahead != '@' && lexer->lookahead != '#' &&
                lexer->lookahead != '~' && lexer->lookahead != '{' &&
                lexer->lookahead != '}' && lexer->lookahead != '(' &&
                lexer->lookahead != ')' && lexer->lookahead != '[') {
+            plain_count++;
             // Also stop if we hit "--" anywhere (for inline comments)
             if (lexer->lookahead == '-') {
                 lexer->mark_end(lexer);
@@ -372,7 +405,10 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         bool has_content = false;
         int paren_depth = 0;
 
-        while (lexer->lookahead != 0 && lexer->lookahead != '\n') {
+        int note_count = 0;
+        while (note_count < 10000 &&
+               lexer->lookahead != 0 && lexer->lookahead != '\n') {
+            note_count++;
             if (lexer->lookahead == '(') {
                 paren_depth++;
             } else if (lexer->lookahead == ')') {
