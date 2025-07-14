@@ -1,0 +1,7 @@
+(recipe
+  (comment)
+  (step
+    (plain_text)
+    (block_comment)
+    (plain_text)
+    (comment)))

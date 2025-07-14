@@ -1,0 +1,5 @@
+(recipe 
+  (step 
+    (ingredient 
+      (recipe_reference) 
+      (amount (quantity) (units)))))

@@ -16,7 +16,9 @@ module.exports = grammar({
     $.ingredient_text,
     $.cookware_text,
     $.timer_text,
-    $.plain_text
+    $.plain_text,
+    $.note_text,
+    $.section_header
   ],
 
   conflicts: $ => [
@@ -27,6 +29,8 @@ module.exports = grammar({
     [$.metadata, $.metadata], // TODO: is this really necessary?
     [$._multiword],
     [$._name_multiword],
+    [$.step],
+    [$._content_line, $.step],
   ],
 
   rules: {
@@ -34,9 +38,14 @@ module.exports = grammar({
       optional($.frontmatter),
       repeat(choice(
         seq($.metadata, $._newline),
-        $.section,
-        seq($._content_line, $._newline)
+        seq($.section, $._newline),
+        seq($._content_line, $._newline),
+        $._newline  // Allow blank lines
       )),
+      optional(choice(
+        $._content_line,
+        $.section
+      )), // Allow content without trailing newline
       optional(/\u0000/), // Strange EOF thing
     ),
 
@@ -67,21 +76,23 @@ module.exports = grammar({
       $.ingredient,
       $.cookware,
       $.timer,
-      $.plain_text
+      $.plain_text,
+      $.block_comment
     )),
     comment:            $ => seq("-", "-", /.*/),
-    block_comment:      $ => seq("[-", /[^-]*-+(?:[^]-][^-]*-+)*/, "]"),
+    block_comment:      $ => token(
+      seq(
+        '[', '-',
+        repeat(choice(
+          /[^\-\]]/,
+          seq('-', /[^\]]/)
+        )),
+        '-', ']'
+      )
+    ),
     note:               $ => seq(">", /.*/),
-    section:            $ => prec.right(PREC.section, seq(
-      field('header', $.section_header),
-      $._newline,
-      field('content', repeat(seq($._content_line, $._newline)))
-    )),
-
-    section_header:     $ => seq(
-      /=+/,
-      optional(field('name', /[^\n=]*[^\n=\s]/)),
-      optional(/\s*=+/)
+    section:            $ => seq(
+      field('header', $.section_header)
     ),
 
     ingredient:         $ => seq(
@@ -92,7 +103,7 @@ module.exports = grammar({
         optional($.amount),
         "}"
       )),
-      optional(seq("(", field('note', /[^)]+/), ")"))
+      optional(seq("(", field('note', $.note_text), ")"))
     ),
     cookware:           $ => seq(
       "#",
@@ -102,7 +113,7 @@ module.exports = grammar({
         optional($.amount),
         "}"
       )),
-      optional(seq("(", field('note', /[^)]+/), ")"))
+      optional(seq("(", field('note', $.note_text), ")"))
     ),
     timer:              $ => seq(
       "~",
@@ -112,20 +123,24 @@ module.exports = grammar({
         optional($.amount),
         "}"
       )),
-      optional(seq("(", field('note', /[^)]+/), ")"))
+      optional(seq("(", field('note', $.note_text), ")"))
     ),
 
     // Ref: https://github.com/cooklang/spec/blob/main/EBNF.md
     name:               $ => prec.left(choice($._name_word, $._name_multiword)),
-    _name_word:         $ => repeat1(choice($._alphabetic, $._digit, /[_\-]/)),
+    _name_word:         $ => repeat1(choice($._alphabetic, $._digit, /[_\-\\]/)),
     _name_multiword:    $ => seq(repeat1(prec.left(PREC.multiword, seq($._name_word, repeat1($._whitespace)))), optional($._name_word)),
     recipe_reference:   $ => /\.[\/\\][^{}\n(]*/,  // Matches paths starting with ./ or .\ (Windows)
     amount:             $ => prec.left(PREC.amount, choice($.quantity, seq($.quantity, repeat($._whitespace), "%", repeat($._whitespace), $.units))),
-    quantity:           $ => prec(PREC.quantity, choice($._number, $._name_multiword)),
+    quantity:           $ => prec(PREC.quantity, choice(
+      $._number,
+      $._name_multiword,
+      seq($._integer, repeat1($._whitespace), $._fractional)  // Mixed fraction like "1 1/2"
+    )),
     units:              $ => choice($._name_word, $._name_multiword),
 
     _multiword:         $ => seq(repeat1(prec.left(PREC.multiword, seq($._word, repeat1($._whitespace)))), optional($._word)),
-    _word:              $ => repeat1(choice($._alphabetic, $._digit, /[_\-]/)),
+    _word:              $ => repeat1(choice($._alphabetic, $._digit, /[_\-\\]/)),
     _text_item:         $ => repeat1(choice($._alphabetic, $._digit, $._symbol, $._punctuation, $._whitespace)),
 
     _number:            $ => choice($._integer, $._fractional, $._decimal),

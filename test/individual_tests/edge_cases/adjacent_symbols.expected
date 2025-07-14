@@ -1,0 +1,10 @@
+(recipe
+  (step
+    (ingredient
+      name: (ingredient_text))
+    (cookware
+      name: (cookware_text))
+    (timer
+      (amount
+        (quantity)
+        (units)))))

@@ -1,0 +1,10 @@
+(recipe 
+  (step 
+    (ingredient 
+      (name) 
+      (amount (quantity))
+      note: )
+    (ingredient 
+      (name) 
+      (amount (quantity) (units))
+      note: (note_text)))

@@ -1,0 +1,14 @@
+(recipe
+  (step
+    (plain_text)
+    (timer
+      name: (timer_text)
+      (amount
+        (quantity)
+        (units)))
+    (plain_text)
+    (timer
+      name: (timer_text)
+      (amount
+        (quantity)
+        (units)))))

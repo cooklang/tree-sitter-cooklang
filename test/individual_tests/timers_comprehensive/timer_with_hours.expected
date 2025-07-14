@@ -1,0 +1,7 @@
+(recipe
+  (step
+    (timer
+      name: (timer_text)
+      (amount
+        (quantity)
+        (units)))))

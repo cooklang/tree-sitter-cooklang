@@ -19,11 +19,6 @@
     }
   },
   {
-    "type": "block_comment",
-    "named": true,
-    "fields": {}
-  },
-  {
     "type": "comment",
     "named": true,
     "fields": {}
@@ -38,6 +33,16 @@
         "types": [
           {
             "type": "cookware_text",
+            "named": true
+          }
+        ]
+      },
+      "note": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "note_text",
             "named": true
           }
         ]
@@ -80,6 +85,16 @@
         "types": [
           {
             "type": "ingredient_text",
+            "named": true
+          }
+        ]
+      },
+      "note": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "note_text",
             "named": true
           }
         ]
@@ -165,28 +180,6 @@
     "type": "section",
     "named": true,
     "fields": {
-      "content": {
-        "multiple": true,
-        "required": false,
-        "types": [
-          {
-            "type": "block_comment",
-            "named": true
-          },
-          {
-            "type": "comment",
-            "named": true
-          },
-          {
-            "type": "note",
-            "named": true
-          },
-          {
-            "type": "step",
-            "named": true
-          }
-        ]
-      },
       "header": {
         "multiple": false,
         "required": true,
@@ -200,11 +193,6 @@
     }
   },
   {
-    "type": "section_header",
-    "named": true,
-    "fields": {}
-  },
-  {
     "type": "step",
     "named": true,
     "fields": {},
@@ -212,6 +200,10 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "block_comment",
+          "named": true
+        },
         {
           "type": "cookware",
           "named": true
@@ -241,6 +233,16 @@
         "types": [
           {
             "type": "timer_text",
+            "named": true
+          }
+        ]
+      },
+      "note": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "note_text",
             "named": true
           }
         ]
@@ -320,12 +322,8 @@
     "named": false
   },
   {
-    "type": "[-",
-    "named": false
-  },
-  {
-    "type": "]",
-    "named": false
+    "type": "block_comment",
+    "named": true
   },
   {
     "type": "cookware_text",
@@ -336,7 +334,15 @@
     "named": true
   },
   {
+    "type": "note_text",
+    "named": true
+  },
+  {
     "type": "plain_text",
+    "named": true
+  },
+  {
+    "type": "section_header",
     "named": true
   },
   {

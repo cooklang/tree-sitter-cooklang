@@ -1,0 +1,8 @@
+(recipe 
+  (step 
+    (plain_text)
+    (ingredient 
+      name: (ingredient_text) 
+      (amount (quantity))
+      note: )
+    (plain_text)))

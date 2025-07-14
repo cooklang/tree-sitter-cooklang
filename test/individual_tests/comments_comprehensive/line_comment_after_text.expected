@@ -1,0 +1,4 @@
+(recipe
+  (step
+    (plain_text)
+    (comment)))
