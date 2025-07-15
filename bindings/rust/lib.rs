@@ -15,10 +15,11 @@
 //! [Parser]: https://docs.rs/tree-sitter/*/tree_sitter/struct.Parser.html
 //! [tree-sitter]: https://tree-sitter.github.io/
 
-use tree_sitter::{Language, LanguageFn};
+use tree_sitter::Language;
+use tree_sitter_language::LanguageFn;
 
 extern "C" {
-    fn tree_sitter_cooklang() -> Language;
+    fn tree_sitter_cooklang() -> *const ();
 }
 
 /// The tree-sitter [`LanguageFn`] for the block grammar.
@@ -28,7 +29,7 @@ pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_cookl
 ///
 /// [Language]: https://docs.rs/tree-sitter/*/tree_sitter/struct.Language.html
 pub fn language() -> Language {
-    unsafe { tree_sitter_cooklang() }
+    LANGUAGE.into()
 }
 
 /// The content of the [`node-types.json`][] file for this grammar.
@@ -62,6 +63,15 @@ mod tests {
         parser
             .set_language(&super::language())
             .expect("Error loading Cooklang grammar");
+    }
+
+    #[test]
+    fn test_language_fn_constant() {
+        let mut parser = tree_sitter::Parser::new();
+        let language = super::LANGUAGE.into();
+        parser
+            .set_language(&language)
+            .expect("Error loading Cooklang grammar via LANGUAGE constant");
     }
 
     #[test]
