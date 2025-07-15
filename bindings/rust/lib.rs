@@ -15,11 +15,14 @@
 //! [Parser]: https://docs.rs/tree-sitter/*/tree_sitter/struct.Parser.html
 //! [tree-sitter]: https://tree-sitter.github.io/
 
-use tree_sitter::Language;
+use tree_sitter::{Language, LanguageFn};
 
 extern "C" {
     fn tree_sitter_cooklang() -> Language;
 }
+
+/// The tree-sitter [`LanguageFn`] for the block grammar.
+pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_cooklang) };
 
 /// Get the tree-sitter [Language][] for this grammar.
 ///
