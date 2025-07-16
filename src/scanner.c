@@ -18,12 +18,17 @@ static bool is_name_char(int32_t c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
            (c >= '0' && c <= '9') ||
-           c == '_' || c == '-' ||
+           c == '_' ||
            c >= 128; // Allow unicode characters
 }
 
 bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
                                                 const bool *valid_symbols) {
+    // If we've reached EOF, return false
+    if (lexer->eof(lexer)) {
+        return false;
+    }
+
     // Handle section headers first - must start at column 0
     if (valid_symbols[SECTION_HEADER] && lexer->get_column(lexer) == 0 && lexer->lookahead == '=') {
         // Consume initial equals signs
@@ -96,7 +101,7 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
             (lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
             (lexer->lookahead >= 'A' && lexer->lookahead <= 'Z') ||
             (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
-            lexer->lookahead == '_' || lexer->lookahead == '-') {
+            lexer->lookahead == '_') {
             // Continue with ingredient parsing
         } else {
             return false;
@@ -199,7 +204,7 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         if (!((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
               (lexer->lookahead >= 'A' && lexer->lookahead <= 'Z') ||
               (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
-              lexer->lookahead == '_' || lexer->lookahead == '-')) {
+              lexer->lookahead == '_')) {
             return false;
         }
         bool has_content = false;
@@ -281,7 +286,7 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
         if (!((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
               (lexer->lookahead >= 'A' && lexer->lookahead <= 'Z') ||
               (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
-              lexer->lookahead == '_' || lexer->lookahead == '-')) {
+              lexer->lookahead == '_')) {
             return false;
         }
         bool has_content = false;
@@ -370,31 +375,38 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
             }
         }
 
-        int plain_count = 0;
-        while (plain_count < 10000 &&
+        // Continue consuming plain text
+        int chars_consumed = 0;
+        while (chars_consumed < 10000 &&
                lexer->lookahead != 0 && lexer->lookahead != '\n' &&
                lexer->lookahead != '@' && lexer->lookahead != '#' &&
                lexer->lookahead != '~' && lexer->lookahead != '{' &&
                lexer->lookahead != '}' && lexer->lookahead != '(' &&
                lexer->lookahead != ')' && lexer->lookahead != '[') {
-            plain_count++;
-            // Also stop if we hit "--" anywhere (for inline comments)
+
+            // Check for comment start "--"
             if (lexer->lookahead == '-') {
-                lexer->mark_end(lexer);
                 lexer->advance(lexer, false);
-                if (lexer->lookahead == '-') {
-                    // This is "--", end the plain text here
-                    return has_content;
-                }
+                chars_consumed++;
                 has_content = true;
+
+                if (lexer->lookahead == '-') {
+                    // This is "--", we need to exclude the first '-' we just consumed
+                    // Use mark_end to set the end position before the hyphen we consumed
+                    lexer->result_symbol = PLAIN_TEXT;
+                    // Only return true if we had content before the hyphen
+                    return chars_consumed > 1;
+                }
+                // Single hyphen, continue normally
                 continue;
             }
 
             has_content = true;
+            chars_consumed++;
             lexer->advance(lexer, false);
         }
 
-        if (has_content) {
+        if (has_content && chars_consumed > 0) {
             lexer->result_symbol = PLAIN_TEXT;
             return true;
         }

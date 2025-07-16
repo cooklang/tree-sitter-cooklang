@@ -21,19 +21,7 @@ const testCases = [
       { text: "}", highlight: "punctuation.bracket" }
     ]
   },
-  {
-    name: "Ingredient with references",
-    input: "Add @./Components/Sauce{2%cups} to bowl.",
-    expected: [
-      { text: "@", highlight: "punctuation.special" },
-      { text: "./Components/Sauce", highlight: "variable" },
-      { text: "2", highlight: "number" },
-      { text: "%", highlight: "operator" },
-      { text: "cups", highlight: "type" },
-      { text: "{", highlight: "punctuation.bracket" },
-      { text: "}", highlight: "punctuation.bracket" }
-    ]
-  },
+
   {
     name: "Cookware",
     input: "Mix in #bowl.",

@@ -16,20 +16,16 @@
 //! [tree-sitter]: https://tree-sitter.github.io/
 
 use tree_sitter::Language;
-use tree_sitter_language::LanguageFn;
 
 extern "C" {
-    fn tree_sitter_cooklang() -> *const ();
+    fn tree_sitter_cooklang() -> Language;
 }
-
-/// The tree-sitter [`LanguageFn`] for the block grammar.
-pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_cooklang) };
 
 /// Get the tree-sitter [Language][] for this grammar.
 ///
 /// [Language]: https://docs.rs/tree-sitter/*/tree_sitter/struct.Language.html
 pub fn language() -> Language {
-    LANGUAGE.into()
+    unsafe { tree_sitter_cooklang() }
 }
 
 /// The content of the [`node-types.json`][] file for this grammar.
