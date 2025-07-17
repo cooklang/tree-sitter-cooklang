@@ -6,7 +6,7 @@
 (note) @comment
 
 ; Sections
-(section_name) @keyword
+(section_name) @text.title
 
 ; Metadata
 (metadata) @keyword
@@ -17,11 +17,11 @@
 
 ; Ingredients
 "@" @punctuation.special
-(ingredient name: (ingredient_name) @variable)
+(ingredient name: (ingredient_name) @constant)
 
 ; Cookware
 "#" @punctuation.special
-(cookware name: (cookware_name) @function)
+(cookware name: (cookware_name) @constant)
 
 ; Timer
 "~" @punctuation.special

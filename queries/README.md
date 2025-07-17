@@ -23,17 +23,6 @@ Enables code folding for:
 - Frontmatter
 - Block comments
 
-### `indents.scm`
-- Provides automatic indentation for section content
-
-### `locals.scm`
-- Defines scopes and definitions for ingredients, cookware, and timers
-- Helps with symbol resolution and refactoring
-
-### `tags.scm`
-- Enables symbol navigation for sections and metadata
-- Allows "Go to Symbol" functionality in editors
-
 ## Usage
 
 These queries are automatically used by editors that support tree-sitter, including:

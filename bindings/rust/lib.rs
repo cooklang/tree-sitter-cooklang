@@ -39,17 +39,8 @@ pub const HIGHLIGHTS_QUERY: &str = include_str!("../../queries/highlights.scm");
 /// The injection query for this grammar (e.g., for YAML in frontmatter).
 pub const INJECTIONS_QUERY: &str = include_str!("../../queries/injections.scm");
 
-/// The local variables query for this grammar.
-pub const LOCALS_QUERY: &str = include_str!("../../queries/locals.scm");
-
-/// The tags query for this grammar (for symbol navigation).
-pub const TAGS_QUERY: &str = include_str!("../../queries/tags.scm");
-
 /// The code folding query for this grammar.
 pub const FOLDS_QUERY: &str = include_str!("../../queries/folds.scm");
-
-/// The indentation query for this grammar.
-pub const INDENTS_QUERY: &str = include_str!("../../queries/indents.scm");
 
 #[cfg(test)]
 mod tests {
@@ -75,10 +66,7 @@ mod tests {
         // Verify that all query constants are non-empty
         assert!(!super::HIGHLIGHTS_QUERY.is_empty());
         assert!(!super::INJECTIONS_QUERY.is_empty());
-        assert!(!super::LOCALS_QUERY.is_empty());
-        assert!(!super::TAGS_QUERY.is_empty());
         assert!(!super::FOLDS_QUERY.is_empty());
-        assert!(!super::INDENTS_QUERY.is_empty());
         
         // Verify that queries can be parsed
         let language = super::language();
