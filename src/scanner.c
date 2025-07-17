@@ -1,456 +1,563 @@
 #include "tree_sitter/parser.h"
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
+#include <wctype.h>
+#include <stdlib.h>
 
 enum TokenType {
     NEWLINE,
-    INGREDIENT_TEXT,
-    COOKWARE_TEXT,
-    TIMER_TEXT,
-    PLAIN_TEXT,
-    NOTE_TEXT,
-    SECTION_HEADER
+    INGREDIENT_NAME,
+    COOKWARE_NAME,
+    TIMER_NAME,
+    TEXT_CONTENT,
+    NOTE_CONTENT,
+    METADATA_KEY,
+    METADATA_VALUE,
+    SECTION_NAME,
+    COMMENT_LINE,
+    COMMENT_BLOCK,
+    RECIPE_NOTE_TEXT,
+    WHITESPACE_TOKEN,
+    EOF
 };
 
-void *tree_sitter_cooklang_external_scanner_create() { return NULL; }
+typedef struct {
+    uint32_t length;
+    uint32_t capacity;
+    char *data;
+} Buffer;
 
-static bool is_name_char(int32_t c) {
+typedef struct {
+    Buffer buffer;
+    bool in_metadata;
+    bool at_line_start;
+    int paren_depth;
+} Scanner;
+
+static inline void buffer_init(Buffer *buffer) {
+    buffer->length = 0;
+    buffer->capacity = 16;
+    buffer->data = malloc(buffer->capacity);
+}
+
+static inline void buffer_free(Buffer *buffer) {
+    free(buffer->data);
+}
+
+static inline void buffer_grow(Buffer *buffer, uint32_t min_capacity) {
+    uint32_t new_capacity = buffer->capacity;
+    while (new_capacity < min_capacity) {
+        new_capacity *= 2;
+    }
+    buffer->data = realloc(buffer->data, new_capacity);
+    buffer->capacity = new_capacity;
+}
+
+static inline void buffer_push(Buffer *buffer, char c) {
+    if (buffer->length + 1 >= buffer->capacity) {
+        buffer_grow(buffer, buffer->length + 2);
+    }
+    buffer->data[buffer->length++] = c;
+}
+
+static inline void buffer_clear(Buffer *buffer) {
+    buffer->length = 0;
+}
+
+static inline bool is_word_char(int32_t c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
            (c >= '0' && c <= '9') ||
-           c == '_' ||
-           c >= 128; // Allow unicode characters
+           c == '_' || c == '-' ||
+           c == '\'' || c == '"' ||
+           c > 127; // Unicode characters
 }
 
-bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer,
-                                                const bool *valid_symbols) {
-    // If we've reached EOF, return false
-    if (lexer->eof(lexer)) {
+static inline bool is_whitespace(int32_t c) {
+    return c == ' ' || c == '\t';
+}
+
+static bool scan_word(TSLexer *lexer, Buffer *buffer) {
+    buffer_clear(buffer);
+
+    if (!is_word_char(lexer->lookahead) && lexer->lookahead != '.') {
         return false;
     }
 
-    // Handle section headers first - must start at column 0
-    if (valid_symbols[SECTION_HEADER] && lexer->get_column(lexer) == 0 && lexer->lookahead == '=') {
-        // Consume initial equals signs
+    while (is_word_char(lexer->lookahead) || lexer->lookahead == '.') {
+        buffer_push(buffer, lexer->lookahead);
+        lexer->advance(lexer, false);
+    }
+
+    return buffer->length > 0;
+}
+
+static bool scan_multiword(TSLexer *lexer, Buffer *buffer) {
+    buffer_clear(buffer);
+
+    // First word
+    if (!is_word_char(lexer->lookahead)) {
+        return false;
+    }
+
+    while (is_word_char(lexer->lookahead)) {
+        buffer_push(buffer, lexer->lookahead);
+        lexer->advance(lexer, false);
+    }
+
+    // Check if we have a quantity/unit pattern immediately following
+    if (lexer->lookahead == '{') {
+        return true;
+    }
+
+    // Save position after first word
+    lexer->mark_end(lexer);
+
+    // Look ahead for more words
+    while (is_whitespace(lexer->lookahead)) {
+        buffer_push(buffer, lexer->lookahead);
+        lexer->advance(lexer, false);
+
+        // After whitespace, check for another word
+        if (is_word_char(lexer->lookahead)) {
+            // Continue collecting the word
+            while (is_word_char(lexer->lookahead)) {
+                buffer_push(buffer, lexer->lookahead);
+                lexer->advance(lexer, false);
+            }
+
+            // Update end position if we find a quantity
+            if (lexer->lookahead == '{') {
+                lexer->mark_end(lexer);
+            }
+        } else {
+            break;
+        }
+    }
+
+    return buffer->length > 0;
+}
+
+static bool scan_text_until(TSLexer *lexer, Buffer *buffer, const char *delimiters) {
+    buffer_clear(buffer);
+    bool has_content = false;
+
+    while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+        // Check for block comment start [-
+        if (lexer->lookahead == '[') {
+            lexer->advance(lexer, false);
+            if (lexer->lookahead == '-') {
+                // It's a block comment, backtrack
+                return has_content;
+            }
+            // Not a block comment, include the [
+            buffer_push(buffer, '[');
+            has_content = true;
+            continue;
+        }
+
+        // Check if we hit any delimiter
+        bool is_delimiter = false;
+        for (const char *d = delimiters; *d; d++) {
+            if (lexer->lookahead == *d) {
+                is_delimiter = true;
+                break;
+            }
+        }
+
+        if (is_delimiter) {
+            break;
+        }
+
+        // Check for comment start
+        if (lexer->lookahead == '-') {
+            lexer->advance(lexer, false);
+            if (lexer->lookahead == '-') {
+                // Backtrack by not including the dash
+                return has_content;
+            }
+            buffer_push(buffer, '-');
+            has_content = true;
+            continue;
+        }
+
+        buffer_push(buffer, lexer->lookahead);
+        has_content = true;
+        lexer->advance(lexer, false);
+    }
+
+    return has_content;
+}
+
+void *tree_sitter_cooklang_external_scanner_create() {
+    Scanner *scanner = malloc(sizeof(Scanner));
+    buffer_init(&scanner->buffer);
+    scanner->in_metadata = false;
+    scanner->at_line_start = true;
+    scanner->paren_depth = 0;
+    return scanner;
+}
+
+void tree_sitter_cooklang_external_scanner_destroy(void *payload) {
+    Scanner *scanner = (Scanner *)payload;
+    buffer_free(&scanner->buffer);
+    free(scanner);
+}
+
+unsigned tree_sitter_cooklang_external_scanner_serialize(void *payload, char *buffer) {
+    Scanner *scanner = (Scanner *)payload;
+    buffer[0] = scanner->in_metadata;
+    buffer[1] = scanner->at_line_start;
+    buffer[2] = scanner->paren_depth;
+    return 3;
+}
+
+void tree_sitter_cooklang_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
+    Scanner *scanner = (Scanner *)payload;
+    if (length >= 3) {
+        scanner->in_metadata = buffer[0];
+        scanner->at_line_start = buffer[1];
+        scanner->paren_depth = buffer[2];
+    }
+}
+
+bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
+    Scanner *scanner = (Scanner *)payload;
+
+    // Handle block comments FIRST - they have highest priority and can appear anywhere
+    if (lexer->lookahead == '[' && valid_symbols[COMMENT_BLOCK]) {
+        lexer->advance(lexer, false);
+        if (lexer->lookahead == '-') {
+            lexer->advance(lexer, false);
+            
+            // Block comment - scan until -]
+            buffer_clear(&scanner->buffer);
+            while (!lexer->eof(lexer)) {
+                if (lexer->lookahead == '-') {
+                    lexer->advance(lexer, false);
+                    if (lexer->lookahead == ']') {
+                        lexer->advance(lexer, false);
+                        break;
+                    }
+                    buffer_push(&scanner->buffer, '-');
+                } else {
+                    buffer_push(&scanner->buffer, lexer->lookahead);
+                    lexer->advance(lexer, false);
+                }
+            }
+            
+            // Don't update at_line_start for block comments
+            lexer->result_symbol = COMMENT_BLOCK;
+            return true;
+        }
+    }
+
+    // Handle whitespace as a token (for extras)
+    if (is_whitespace(lexer->lookahead) && valid_symbols[WHITESPACE_TOKEN]) {
+        lexer->result_symbol = WHITESPACE_TOKEN;
+        lexer->advance(lexer, false);
+        while (is_whitespace(lexer->lookahead)) {
+            lexer->advance(lexer, false);
+        }
+        return true;
+    }
+    
+    // Skip whitespace if not handling it as a token
+    while (is_whitespace(lexer->lookahead)) {
+        lexer->advance(lexer, true);
+    }
+
+    // Track line starts
+    if (lexer->get_column(lexer) == 0) {
+        scanner->at_line_start = true;
+    }
+
+    // Handle EOF
+    if (lexer->eof(lexer)) {
+        if (valid_symbols[EOF]) {
+            lexer->result_symbol = EOF;
+            return true;
+        }
+        return false;
+    }
+
+    // Handle newlines
+    if (lexer->lookahead == '\n') {
+        if (valid_symbols[NEWLINE]) {
+            lexer->advance(lexer, false);
+            scanner->at_line_start = true;
+            lexer->result_symbol = NEWLINE;
+            return true;
+        }
+        return false;
+    }
+
+    // Handle recipe notes (at start of line with single >)
+    if (scanner->at_line_start && lexer->lookahead == '>' && valid_symbols[RECIPE_NOTE_TEXT]) {
+        lexer->advance(lexer, false);
+
+        // If it's not >>, it's a recipe note
+        if (lexer->lookahead != '>') {
+            // Skip optional whitespace
+            while (is_whitespace(lexer->lookahead)) {
+                lexer->advance(lexer, false);
+            }
+
+            // Scan until end of line
+            buffer_clear(&scanner->buffer);
+            while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+                buffer_push(&scanner->buffer, lexer->lookahead);
+                lexer->advance(lexer, false);
+            }
+
+            scanner->at_line_start = false;
+            lexer->result_symbol = RECIPE_NOTE_TEXT;
+            return true;
+        } else {
+            // Put back the > we consumed
+            return false;
+        }
+    }
+
+    // Handle metadata (at start of line with >>)
+    if (scanner->at_line_start && lexer->lookahead == '>' && valid_symbols[METADATA_KEY]) {
+        lexer->advance(lexer, false);
+        if (lexer->lookahead == '>') {
+            lexer->advance(lexer, false);
+
+            // Skip whitespace
+            while (is_whitespace(lexer->lookahead)) {
+                lexer->advance(lexer, false);
+            }
+
+            // Scan metadata key (can be multi-word)
+            buffer_clear(&scanner->buffer);
+            bool has_key = false;
+            while (!lexer->eof(lexer) && lexer->lookahead != ':' && lexer->lookahead != '\n') {
+                buffer_push(&scanner->buffer, lexer->lookahead);
+                has_key = true;
+                lexer->advance(lexer, false);
+            }
+
+            // Trim trailing whitespace
+            while (scanner->buffer.length > 0 &&
+                   is_whitespace(scanner->buffer.data[scanner->buffer.length - 1])) {
+                scanner->buffer.length--;
+            }
+
+            if (has_key && scanner->buffer.length > 0) {
+                scanner->in_metadata = true;
+                scanner->at_line_start = false;
+                lexer->result_symbol = METADATA_KEY;
+                return true;
+            }
+        }
+    }
+
+    // Handle metadata value (after colon in metadata line)
+    if (scanner->in_metadata && valid_symbols[METADATA_VALUE]) {
+        // Skip the colon if present
+        if (lexer->lookahead == ':') {
+            lexer->advance(lexer, false);
+        }
+
+        // Skip whitespace
+        while (is_whitespace(lexer->lookahead)) {
+            lexer->advance(lexer, false);
+        }
+
+        // Scan until end of line
+        buffer_clear(&scanner->buffer);
+        while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+            buffer_push(&scanner->buffer, lexer->lookahead);
+            lexer->advance(lexer, false);
+        }
+
+        if (scanner->buffer.length > 0) {
+            scanner->in_metadata = false;
+            lexer->result_symbol = METADATA_VALUE;
+            return true;
+        }
+    }
+
+    // Handle section headers (at start of line with =)
+    if (scanner->at_line_start && lexer->lookahead == '=' && valid_symbols[SECTION_NAME]) {
         int equals_count = 0;
         while (lexer->lookahead == '=') {
             equals_count++;
             lexer->advance(lexer, false);
         }
 
-        // Must have at least one equals sign
-        if (equals_count == 0) {
-            return false;
-        }
-
-        // Skip whitespace
-        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-            lexer->advance(lexer, false);
-        }
-
-        // Consume the name (optional)
-        bool has_name = false;
-        int last_non_space = -1;
-        int pos = 0;
-
-        while (lexer->lookahead != '\n' && lexer->lookahead != 0) {
-            if (lexer->lookahead == '=') {
-                // We've hit trailing equals, stop here
-                break;
-            }
-            if (lexer->lookahead != ' ' && lexer->lookahead != '\t') {
-                last_non_space = pos;
-            }
-            has_name = true;
-            lexer->advance(lexer, false);
-            pos++;
-        }
-
-        // Mark end at last non-space character if we have a name
-        if (has_name && last_non_space >= 0) {
-            // The lexer has advanced past where we want to end
-            // We'll include everything up to the current position
-        }
-
-        // Optionally consume trailing equals signs and spaces
-        while (lexer->lookahead == '=' || lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-            if (lexer->lookahead == '\n') break;
-            lexer->advance(lexer, false);
-        }
-
-        lexer->result_symbol = SECTION_HEADER;
-        return true;
-    }
-
-    // Handle newlines
-    if (lexer->lookahead == '\n' && valid_symbols[NEWLINE]) {
-        lexer->advance(lexer, false);
-        lexer->result_symbol = NEWLINE;
-        return true;
-    }
-
-    // Handle ingredient text - this is text that follows @ up to { or whitespace or end
-    if (valid_symbols[INGREDIENT_TEXT]) {
-        // Don't parse ingredient text at the start of a line
-        if (lexer->get_column(lexer) == 0) {
-            return false;
-        }
-
-        // Only start parsing ingredient text if it's a valid start character
-        if (lexer->lookahead == '.' ||
-            (lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
-            (lexer->lookahead >= 'A' && lexer->lookahead <= 'Z') ||
-            (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
-            lexer->lookahead == '_') {
-            // Continue with ingredient parsing
-        } else {
-            return false;
-        }
-        // Check for recipe reference
-        if (lexer->lookahead == '.') {
-            lexer->advance(lexer, false);
-            if (lexer->lookahead == '/' || lexer->lookahead == '\\') {
+        if (equals_count > 0) {
+            // Skip whitespace
+            while (is_whitespace(lexer->lookahead)) {
                 lexer->advance(lexer, false);
-                // Consume path characters (including spaces)
-                int path_count = 0;
-                while (path_count < 1000 &&
-                       lexer->lookahead != 0 && lexer->lookahead != '\n' &&
-                       lexer->lookahead != '{' && lexer->lookahead != '(') {
+            }
+
+            // Scan section name
+            buffer_clear(&scanner->buffer);
+            while (!lexer->eof(lexer) && lexer->lookahead != '\n' && lexer->lookahead != '=') {
+                buffer_push(&scanner->buffer, lexer->lookahead);
+                lexer->advance(lexer, false);
+            }
+
+            // Trim trailing whitespace from buffer
+            while (scanner->buffer.length > 0 &&
+                   is_whitespace(scanner->buffer.data[scanner->buffer.length - 1])) {
+                scanner->buffer.length--;
+            }
+
+            // Skip trailing equals
+            while (lexer->lookahead == '=' || is_whitespace(lexer->lookahead)) {
+                if (lexer->lookahead == '\n') break;
+                lexer->advance(lexer, false);
+            }
+
+            scanner->at_line_start = false;
+            lexer->result_symbol = SECTION_NAME;
+            return true;
+        }
+    }
+
+    // Handle comments (both at line start and inline)
+    if (lexer->lookahead == '-' && valid_symbols[COMMENT_LINE]) {
+        lexer->advance(lexer, false);
+        if (lexer->lookahead == '-') {
+            lexer->advance(lexer, false);
+            
+            // Skip optional space after --
+            while (is_whitespace(lexer->lookahead)) {
+                lexer->advance(lexer, false);
+            }
+
+            // Line comment
+            buffer_clear(&scanner->buffer);
+            while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+                buffer_push(&scanner->buffer, lexer->lookahead);
+                lexer->advance(lexer, false);
+            }
+
+            scanner->at_line_start = false;
+            lexer->result_symbol = COMMENT_LINE;
+            return true;
+        }
+    }
+
+
+    // Handle ingredient names (after @)
+    if (valid_symbols[INGREDIENT_NAME]) {
+        // Check for recipe reference (starts with . and / or \)
+        if (lexer->lookahead == '.') {
+            buffer_clear(&scanner->buffer);
+            buffer_push(&scanner->buffer, lexer->lookahead);
+            lexer->advance(lexer, false);
+
+            if (lexer->lookahead == '/' || lexer->lookahead == '\\') {
+                buffer_push(&scanner->buffer, lexer->lookahead);
+                lexer->advance(lexer, false);
+
+                // Consume path characters
+                while (!lexer->eof(lexer) && lexer->lookahead != '{' &&
+                       lexer->lookahead != '(' && lexer->lookahead != '\n' &&
+                       lexer->lookahead != '@' && lexer->lookahead != '#' &&
+                       lexer->lookahead != '~') {
+                    buffer_push(&scanner->buffer, lexer->lookahead);
                     lexer->advance(lexer, false);
-                    path_count++;
                 }
-                lexer->result_symbol = INGREDIENT_TEXT;
+
+                scanner->at_line_start = false;
+                lexer->result_symbol = INGREDIENT_NAME;
                 return true;
             }
         }
 
         // Regular ingredient name
-        bool has_content = false;
-
-        // First, consume initial word characters
-        int char_count = 0;
-        while (is_name_char(lexer->lookahead) && char_count < 1000) {
-            has_content = true;
-            lexer->advance(lexer, false);
-            char_count++;
-        }
-
-        if (!has_content) {
-            return false;
-        }
-
-        // Now check if we should continue for multiword
-        if (lexer->lookahead == '{') {
-            // We're done - single word before brace
-            lexer->result_symbol = INGREDIENT_TEXT;
-            return true;
-        }
-
-        // Mark position after first word as potential end
-        lexer->mark_end(lexer);
-
-        // Look ahead to see if there's a brace
-        bool found_brace = false;
-        bool consumed_space = false;
-        int safety_counter = 0;
-        const int MAX_LOOKAHEAD = 1000;
-
-        while (safety_counter < MAX_LOOKAHEAD &&
-               lexer->lookahead != 0 && lexer->lookahead != '\n' &&
-               lexer->lookahead != '(' && lexer->lookahead != '@' &&
-               lexer->lookahead != '#' && lexer->lookahead != '~') {
-
-            safety_counter++;
-
-            if (lexer->lookahead == '{') {
-                found_brace = true;
-                break;
-            }
-
-            if (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-                consumed_space = true;
-                lexer->advance(lexer, false);
-            } else if (consumed_space && is_name_char(lexer->lookahead)) {
-                // Continue consuming for potential multiword
-                while (is_name_char(lexer->lookahead) && safety_counter < MAX_LOOKAHEAD) {
-                    lexer->advance(lexer, false);
-                    safety_counter++;
-                }
-                consumed_space = false;
-            } else {
-                // Non-name character after space, stop here
-                break;
-            }
-        }
-
-        // If we found '{', this is multiword - use current position
-        if (found_brace && safety_counter < MAX_LOOKAHEAD) {
-            // Trim trailing whitespace if any
-            while ((lexer->lookahead == ' ' || lexer->lookahead == '\t') && safety_counter < MAX_LOOKAHEAD) {
-                lexer->advance(lexer, false);
-                safety_counter++;
-            }
-            lexer->mark_end(lexer);
-        }
-        // Otherwise use the saved position (single word)
-
-        lexer->result_symbol = INGREDIENT_TEXT;
-        return true;
-    }
-
-    // Handle cookware text (can be multiword)
-    if (valid_symbols[COOKWARE_TEXT]) {
-        // Only start if valid character
-        if (!((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
-              (lexer->lookahead >= 'A' && lexer->lookahead <= 'Z') ||
-              (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
-              lexer->lookahead == '_')) {
-            return false;
-        }
-        bool has_content = false;
-
-        // First, consume initial word characters
-        int char_count = 0;
-        while (is_name_char(lexer->lookahead) && char_count < 1000) {
-            has_content = true;
-            lexer->advance(lexer, false);
-            char_count++;
-        }
-
-        if (!has_content) {
-            return false;
-        }
-
-        // Now check if we should continue for multiword
-        if (lexer->lookahead == '{') {
-            // We're done - single word before brace
-            lexer->result_symbol = COOKWARE_TEXT;
-            return true;
-        }
-
-        // Mark position after first word as potential end
-        lexer->mark_end(lexer);
-
-        // Look ahead to see if there's a brace
-        bool found_brace = false;
-        bool consumed_space = false;
-        int safety_counter = 0;
-        const int MAX_LOOKAHEAD = 1000;
-
-        while (safety_counter < MAX_LOOKAHEAD &&
-               lexer->lookahead != 0 && lexer->lookahead != '\n' &&
-               lexer->lookahead != '(' && lexer->lookahead != '@' &&
-               lexer->lookahead != '#' && lexer->lookahead != '~') {
-
-            safety_counter++;
-
-            if (lexer->lookahead == '{') {
-                found_brace = true;
-                break;
-            }
-
-            if (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-                consumed_space = true;
-                lexer->advance(lexer, false);
-            } else if (consumed_space && is_name_char(lexer->lookahead)) {
-                // Continue consuming for potential multiword
-                while (is_name_char(lexer->lookahead) && safety_counter < MAX_LOOKAHEAD) {
-                    lexer->advance(lexer, false);
-                    safety_counter++;
-                }
-                consumed_space = false;
-            } else {
-                // Non-name character after space, stop here
-                break;
-            }
-        }
-
-        // If we found '{', this is multiword - use current position
-        if (found_brace && safety_counter < MAX_LOOKAHEAD) {
-            // Trim trailing whitespace if any
-            while ((lexer->lookahead == ' ' || lexer->lookahead == '\t') && safety_counter < MAX_LOOKAHEAD) {
-                lexer->advance(lexer, false);
-                safety_counter++;
-            }
-            lexer->mark_end(lexer);
-        }
-        // Otherwise use the saved position (single word)
-
-        lexer->result_symbol = COOKWARE_TEXT;
-        return true;
-    }
-
-    // Handle timer text (can be multiword)
-    if (valid_symbols[TIMER_TEXT]) {
-        // Only start if valid character
-        if (!((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
-              (lexer->lookahead >= 'A' && lexer->lookahead <= 'Z') ||
-              (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
-              lexer->lookahead == '_')) {
-            return false;
-        }
-        bool has_content = false;
-
-        // First, consume initial word characters
-        int char_count = 0;
-        while (is_name_char(lexer->lookahead) && char_count < 1000) {
-            has_content = true;
-            lexer->advance(lexer, false);
-            char_count++;
-        }
-
-        if (!has_content) {
-            return false;
-        }
-
-        // Now check if we should continue for multiword
-        if (lexer->lookahead == '{') {
-            // We're done - single word before brace
-            lexer->result_symbol = TIMER_TEXT;
-            return true;
-        }
-
-        // Mark position after first word as potential end
-        lexer->mark_end(lexer);
-
-        // Look ahead to see if there's a brace
-        bool found_brace = false;
-        bool consumed_space = false;
-        int safety_counter = 0;
-        const int MAX_LOOKAHEAD = 1000;
-
-        while (safety_counter < MAX_LOOKAHEAD &&
-               lexer->lookahead != 0 && lexer->lookahead != '\n' &&
-               lexer->lookahead != '(' && lexer->lookahead != '@' &&
-               lexer->lookahead != '#' && lexer->lookahead != '~') {
-
-            safety_counter++;
-
-            if (lexer->lookahead == '{') {
-                found_brace = true;
-                break;
-            }
-
-            if (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-                consumed_space = true;
-                lexer->advance(lexer, false);
-            } else if (consumed_space && is_name_char(lexer->lookahead)) {
-                // Continue consuming for potential multiword
-                while (is_name_char(lexer->lookahead) && safety_counter < MAX_LOOKAHEAD) {
-                    lexer->advance(lexer, false);
-                    safety_counter++;
-                }
-                consumed_space = false;
-            } else {
-                // Non-name character after space, stop here
-                break;
-            }
-        }
-
-        // If we found '{', this is multiword - use current position
-        if (found_brace && safety_counter < MAX_LOOKAHEAD) {
-            // Trim trailing whitespace if any
-            while ((lexer->lookahead == ' ' || lexer->lookahead == '\t') && safety_counter < MAX_LOOKAHEAD) {
-                lexer->advance(lexer, false);
-                safety_counter++;
-            }
-            lexer->mark_end(lexer);
-        }
-        // Otherwise use the saved position (single word)
-
-        lexer->result_symbol = TIMER_TEXT;
-        return true;
-    }
-
-    // Handle plain text - everything that's not a special character
-    if (valid_symbols[PLAIN_TEXT]) {
-        bool has_content = false;
-
-        // Check for special patterns at the start of line
-        if (lexer->get_column(lexer) == 0) {
-            // Don't consume lines starting with "---", "-", ">", ">>", "=", or "["
-            if (lexer->lookahead == '-' || lexer->lookahead == '>' || 
-                lexer->lookahead == '=' || lexer->lookahead == '[') {
-                return false;
-            }
-        }
-
-        // Continue consuming plain text
-        int chars_consumed = 0;
-        while (chars_consumed < 10000 &&
-               lexer->lookahead != 0 && lexer->lookahead != '\n' &&
-               lexer->lookahead != '@' && lexer->lookahead != '#' &&
-               lexer->lookahead != '~' && lexer->lookahead != '{' &&
-               lexer->lookahead != '}' && lexer->lookahead != '(' &&
-               lexer->lookahead != ')' && lexer->lookahead != '[') {
-
-            // Check for comment start "--"
-            if (lexer->lookahead == '-') {
-                lexer->advance(lexer, false);
-                chars_consumed++;
-                has_content = true;
-
-                if (lexer->lookahead == '-') {
-                    // This is "--", we need to exclude the first '-' we just consumed
-                    // Use mark_end to set the end position before the hyphen we consumed
-                    lexer->result_symbol = PLAIN_TEXT;
-                    // Only return true if we had content before the hyphen
-                    return chars_consumed > 1;
-                }
-                // Single hyphen, continue normally
-                continue;
-            }
-
-            has_content = true;
-            chars_consumed++;
-            lexer->advance(lexer, false);
-        }
-
-        if (has_content && chars_consumed > 0) {
-            lexer->result_symbol = PLAIN_TEXT;
+        if (scan_multiword(lexer, &scanner->buffer)) {
+            scanner->at_line_start = false;
+            lexer->result_symbol = INGREDIENT_NAME;
             return true;
         }
     }
 
-    // Handle note text - text inside parentheses (with nested parentheses support)
-    if (valid_symbols[NOTE_TEXT] && lexer->lookahead != ')' && lexer->lookahead != 0) {
-        bool has_content = false;
-        int paren_depth = 0;
+    // Handle cookware names (after #)
+    if (valid_symbols[COOKWARE_NAME]) {
+        if (scan_multiword(lexer, &scanner->buffer)) {
+            scanner->at_line_start = false;
+            lexer->result_symbol = COOKWARE_NAME;
+            return true;
+        }
+    }
 
-        int note_count = 0;
-        while (note_count < 10000 &&
-               lexer->lookahead != 0 && lexer->lookahead != '\n') {
-            note_count++;
+    // Handle timer names (after ~)
+    if (valid_symbols[TIMER_NAME]) {
+        if (scan_multiword(lexer, &scanner->buffer)) {
+            scanner->at_line_start = false;
+            lexer->result_symbol = TIMER_NAME;
+            return true;
+        }
+    }
+
+    // Handle note content (inside parentheses)
+    if (valid_symbols[NOTE_CONTENT]) {
+        buffer_clear(&scanner->buffer);
+        int paren_depth = scanner->paren_depth;
+
+        while (!lexer->eof(lexer)) {
             if (lexer->lookahead == '(') {
                 paren_depth++;
+                buffer_push(&scanner->buffer, lexer->lookahead);
+                lexer->advance(lexer, false);
             } else if (lexer->lookahead == ')') {
                 if (paren_depth == 0) {
-                    // This is the closing parenthesis for the note
+                    // End of note
                     break;
                 }
                 paren_depth--;
+                buffer_push(&scanner->buffer, lexer->lookahead);
+                lexer->advance(lexer, false);
+            } else if (lexer->lookahead == '\n') {
+                // Notes can't span lines in standard Cooklang
+                break;
+            } else {
+                buffer_push(&scanner->buffer, lexer->lookahead);
+                lexer->advance(lexer, false);
             }
-            has_content = true;
-            lexer->advance(lexer, false);
         }
 
-        if (has_content) {
-            lexer->result_symbol = NOTE_TEXT;
+        if (scanner->buffer.length > 0) {
+            scanner->at_line_start = false;
+            lexer->result_symbol = NOTE_CONTENT;
             return true;
         }
     }
 
+    // Handle plain text content
+    if (valid_symbols[TEXT_CONTENT]) {
+        // Don't start text with special line starters
+        if (scanner->at_line_start) {
+            if (lexer->lookahead == '-' || lexer->lookahead == '=' || lexer->lookahead == '[') {
+                return false;
+            }
+            // For '>', only stop if it's a single > (not >>)
+            if (lexer->lookahead == '>') {
+                lexer->advance(lexer, false);
+                if (lexer->lookahead != '>') {
+                    // Single >, not text
+                    return false;
+                }
+                // It's >>, backtrack and continue as text
+                // But we can't backtrack, so just include the > in text
+                buffer_push(&scanner->buffer, '>');
+            }
+        }
+        
+        if (scan_text_until(lexer, &scanner->buffer, "@#~{}()")) {
+            scanner->at_line_start = false;
+            lexer->result_symbol = TEXT_CONTENT;
+            return true;
+        }
+    }
 
     return false;
 }
-
-unsigned tree_sitter_cooklang_external_scanner_serialize(void *payload,
-                                                         char *buffer) {
-    return 0;
-}
-
-void tree_sitter_cooklang_external_scanner_deserialize(void *payload,
-                                                       const char *buffer,
-                                                       unsigned length) {}
-
-void tree_sitter_cooklang_external_scanner_destroy(void *payload) {}

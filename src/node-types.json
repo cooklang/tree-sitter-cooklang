@@ -1,27 +1,37 @@
 [
   {
-    "type": "amount",
+    "type": "block_comment",
     "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "quantity",
-          "named": true
-        },
-        {
-          "type": "units",
-          "named": true
-        }
-      ]
+    "extra": true,
+    "fields": {
+      "content": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "comment_block",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {
     "type": "comment",
     "named": true,
-    "fields": {}
+    "extra": true,
+    "fields": {
+      "content": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "comment_line",
+            "named": true
+          }
+        ]
+      }
+    }
   },
   {
     "type": "cookware",
@@ -32,28 +42,22 @@
         "required": true,
         "types": [
           {
-            "type": "cookware_text",
-            "named": true
-          }
-        ]
-      },
-      "note": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "note_text",
+            "type": "cookware_name",
             "named": true
           }
         ]
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
         {
-          "type": "amount",
+          "type": "note",
+          "named": true
+        },
+        {
+          "type": "quantity",
           "named": true
         }
       ]
@@ -62,18 +66,22 @@
   {
     "type": "frontmatter",
     "named": true,
-    "fields": {
-      "content": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "yaml_content",
-            "named": true
-          }
-        ]
-      }
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "frontmatter_content",
+          "named": true
+        }
+      ]
     }
+  },
+  {
+    "type": "frontmatter_content",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "ingredient",
@@ -84,28 +92,22 @@
         "required": true,
         "types": [
           {
-            "type": "ingredient_text",
-            "named": true
-          }
-        ]
-      },
-      "note": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "note_text",
+            "type": "ingredient_name",
             "named": true
           }
         ]
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
         {
-          "type": "amount",
+          "type": "note",
+          "named": true
+        },
+        {
+          "type": "quantity",
           "named": true
         }
       ]
@@ -114,22 +116,44 @@
   {
     "type": "metadata",
     "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": false,
-      "types": [
-        {
-          "type": "amount",
-          "named": true
-        }
-      ]
+    "fields": {
+      "key": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "metadata_key",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "metadata_value",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {
     "type": "note",
     "named": true,
-    "fields": {}
+    "fields": {
+      "content": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "note_content",
+            "named": true
+          }
+        ]
+      }
+    }
   },
   {
     "type": "quantity",
@@ -146,14 +170,6 @@
       "required": false,
       "types": [
         {
-          "type": "block_comment",
-          "named": true
-        },
-        {
-          "type": "comment",
-          "named": true
-        },
-        {
           "type": "frontmatter",
           "named": true
         },
@@ -162,7 +178,7 @@
           "named": true
         },
         {
-          "type": "note",
+          "type": "recipe_note",
           "named": true
         },
         {
@@ -177,15 +193,31 @@
     }
   },
   {
+    "type": "recipe_note",
+    "named": true,
+    "fields": {
+      "text": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "recipe_note_text",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "section",
     "named": true,
     "fields": {
-      "header": {
+      "name": {
         "multiple": false,
         "required": true,
         "types": [
           {
-            "type": "section_header",
+            "type": "section_name",
             "named": true
           }
         ]
@@ -201,10 +233,6 @@
       "required": true,
       "types": [
         {
-          "type": "block_comment",
-          "named": true
-        },
-        {
           "type": "cookware",
           "named": true
         },
@@ -213,11 +241,30 @@
           "named": true
         },
         {
-          "type": "plain_text",
+          "type": "note",
+          "named": true
+        },
+        {
+          "type": "text",
           "named": true
         },
         {
           "type": "timer",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "text",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "text_content",
           "named": true
         }
       ]
@@ -232,49 +279,29 @@
         "required": false,
         "types": [
           {
-            "type": "timer_text",
-            "named": true
-          }
-        ]
-      },
-      "note": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "note_text",
+            "type": "timer_name",
             "named": true
           }
         ]
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
         {
-          "type": "amount",
+          "type": "note",
+          "named": true
+        },
+        {
+          "type": "quantity",
           "named": true
         }
       ]
     }
   },
   {
-    "type": "units",
-    "named": true,
-    "fields": {}
-  },
-  {
-    "type": "yaml_content",
-    "named": true,
-    "fields": {}
-  },
-  {
     "type": "#",
-    "named": false
-  },
-  {
-    "type": "%",
     "named": false
   },
   {
@@ -286,23 +313,7 @@
     "named": false
   },
   {
-    "type": "-",
-    "named": false
-  },
-  {
     "type": "---",
-    "named": false
-  },
-  {
-    "type": ".",
-    "named": false
-  },
-  {
-    "type": "/",
-    "named": false
-  },
-  {
-    "type": "0",
     "named": false
   },
   {
@@ -314,39 +325,51 @@
     "named": false
   },
   {
-    "type": ">>",
-    "named": false
-  },
-  {
     "type": "@",
     "named": false
   },
   {
-    "type": "block_comment",
+    "type": "comment_block",
     "named": true
   },
   {
-    "type": "cookware_text",
+    "type": "comment_line",
     "named": true
   },
   {
-    "type": "ingredient_text",
+    "type": "cookware_name",
     "named": true
   },
   {
-    "type": "note_text",
+    "type": "ingredient_name",
     "named": true
   },
   {
-    "type": "plain_text",
+    "type": "metadata_key",
     "named": true
   },
   {
-    "type": "section_header",
+    "type": "metadata_value",
     "named": true
   },
   {
-    "type": "timer_text",
+    "type": "note_content",
+    "named": true
+  },
+  {
+    "type": "recipe_note_text",
+    "named": true
+  },
+  {
+    "type": "section_name",
+    "named": true
+  },
+  {
+    "type": "text_content",
+    "named": true
+  },
+  {
+    "type": "timer_name",
     "named": true
   },
   {

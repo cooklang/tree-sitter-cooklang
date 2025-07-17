@@ -4,4 +4,4 @@
 (section) @indent
 
 ; Dedent section headers
-(section_header) @outdent
+(section_name) @outdent

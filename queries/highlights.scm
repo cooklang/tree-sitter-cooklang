@@ -6,26 +6,26 @@
 (note) @comment
 
 ; Sections
-(section_header) @keyword
+(section_name) @keyword
 
 ; Metadata
 (metadata) @keyword
 
 ; Frontmatter
 (frontmatter) @keyword
-(yaml_content) @string
+(frontmatter_content) @string
 
 ; Ingredients
 "@" @punctuation.special
-(ingredient name: (ingredient_text) @variable)
+(ingredient name: (ingredient_name) @variable)
 
 ; Cookware
 "#" @punctuation.special
-(cookware name: (cookware_text) @function)
+(cookware name: (cookware_name) @function)
 
 ; Timer
 "~" @punctuation.special
-(timer name: (timer_text) @constant)
+(timer name: (timer_name) @constant)
 
 ; Amounts
 (quantity) @number

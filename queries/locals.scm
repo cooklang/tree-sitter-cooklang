@@ -2,13 +2,13 @@
 ; These are commented out to avoid conflicts with highlight queries
 
 ; Define ingredients
-; (ingredient name: (ingredient_text) @definition.ingredient)
+; (ingredient name: (ingredient_name) @definition.ingredient)
 
 ; Define cookware
-; (cookware name: (cookware_text) @definition.cookware)
+; (cookware name: (cookware_name) @definition.cookware)
 
 ; Define timers
-; (timer name: (timer_text) @definition.timer)
+; (timer name: (timer_name) @definition.timer)
 
 ; Scopes
 (recipe) @scope
