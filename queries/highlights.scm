@@ -29,10 +29,7 @@
 
 ; Amounts
 (quantity) @number
-(units) @type
-
-; Operators
-"%" @operator
+(_quantity_content) @string
 
 ; Brackets
 "{" @punctuation.bracket
