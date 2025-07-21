@@ -29,7 +29,6 @@
 
 ; Amounts
 (quantity) @number
-(_quantity_content) @string
 
 ; Brackets
 "{" @punctuation.bracket

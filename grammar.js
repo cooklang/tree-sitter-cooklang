@@ -51,10 +51,10 @@ module.exports = grammar({
     ),
 
     frontmatter: $ => seq(
-      '---',
+      token(prec(10, '---')),
       $._newline,
       optional($.frontmatter_content),
-      '---',
+      token(prec(10, '---')),
       $._newline
     ),
 

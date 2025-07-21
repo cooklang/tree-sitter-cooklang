@@ -422,6 +422,49 @@ bool tree_sitter_cooklang_external_scanner_scan(void *payload, TSLexer *lexer, c
 
     // Handle comments (both at line start and inline)
     if (lexer->lookahead == '-' && valid_symbols[COMMENT_LINE]) {
+        // Check if this could be frontmatter (--- at line start)
+        if (scanner->at_line_start && lexer->get_column(lexer) == 0) {
+            // Peek ahead to see if it's ---
+            int dash_count = 0;
+            while (lexer->lookahead == '-' && dash_count < 3) {
+                lexer->advance(lexer, false);
+                dash_count++;
+            }
+
+            // If we have exactly --- followed by newline or whitespace, it's frontmatter
+            if (dash_count == 3 && (lexer->lookahead == '\n' || lexer->eof(lexer))) {
+                // Don't consume this as a comment, let the grammar handle it
+                return false;
+            }
+
+            // Otherwise, reprocess as comment
+            // We've already consumed some dashes, so include them in the comment
+            if (dash_count >= 2) {
+                buffer_clear(&scanner->buffer);
+                // Add any extra dashes beyond the first 2
+                for (int i = 2; i < dash_count; i++) {
+                    buffer_push(&scanner->buffer, '-');
+                }
+
+                // Skip optional space after --
+                while (is_whitespace(lexer->lookahead)) {
+                    lexer->advance(lexer, false);
+                }
+
+                // Continue with rest of line
+                while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+                    buffer_push(&scanner->buffer, lexer->lookahead);
+                    lexer->advance(lexer, false);
+                }
+
+                scanner->at_line_start = false;
+                lexer->result_symbol = COMMENT_LINE;
+                return true;
+            }
+            return false;
+        }
+
+        // Normal comment handling
         lexer->advance(lexer, false);
         if (lexer->lookahead == '-') {
             lexer->advance(lexer, false);
